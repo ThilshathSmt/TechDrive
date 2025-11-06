@@ -27,22 +27,16 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
     @Query("SELECT a FROM Appointment a JOIN FETCH a.appointmentServices WHERE a.id = :appointmentId")
     Optional<Appointment> findByIdWithServices(@Param("appointmentId") Long appointmentId);
 
-    // Find all appointments by customer and status
     List<Appointment> findByCustomerIdAndStatus(Long customerId, AppointmentStatus status);
 
-    // Find all appointments by assigned employee
     List<Appointment> findByAssignedEmployeeId(Long employeeId);
 
-    // Find all appointments by status
     List<Appointment> findByStatus(AppointmentStatus status);
 
-    // Find appointments by vehicle
     List<Appointment> findByVehicleId(Long vehicleId);
 
-    // Find appointments scheduled between two dates
     List<Appointment> findByScheduledDateTimeBetween(LocalDateTime start, LocalDateTime end);
 
-    // Find upcoming appointments for a customer
     @Query("SELECT a FROM Appointment a WHERE a.customer.id = :customerId " +
             "AND a.scheduledDateTime > :currentDateTime " +
             "ORDER BY a.scheduledDateTime ASC")
@@ -51,7 +45,6 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
             @Param("currentDateTime") LocalDateTime currentDateTime
     );
 
-    // Find past appointments for a customer
     @Query("SELECT a FROM Appointment a WHERE a.customer.id = :customerId " +
             "AND a.scheduledDateTime < :currentDateTime " +
             "ORDER BY a.scheduledDateTime DESC")
@@ -86,6 +79,7 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
            """)
     BigDecimal sumFinalCostByStatus(AppointmentStatus status);
 
+
     long countByCustomer_Email(String email);
 
     long countByCustomer_EmailAndStatus(String email, AppointmentStatus status);
@@ -95,4 +89,17 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
 
     List<Appointment> findAllByCustomerIdAndScheduledDateTimeGreaterThanEqualOrderByScheduledDateTimeAsc(
             Long customerId, LocalDateTime scheduledFrom);
+
+     @Query("""
+        select distinct a
+        from Appointment a
+        left join fetch a.customer c
+        left join fetch a.vehicle v
+        left join fetch a.assignedEmployee e
+        left join fetch a.appointmentServices s
+        order by a.createdAt desc
+    """)
+    List<Appointment> findAllWithDetails();
+
+    List<Appointment> findByCustomerId(Long customerId);
 }

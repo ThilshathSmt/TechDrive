@@ -8,32 +8,28 @@ import com.gearsync.backend.model.*;
 import com.gearsync.backend.repository.AppointmentRepository;
 import com.gearsync.backend.repository.ProjectRepository;
 import com.gearsync.backend.repository.UserRepository;
+import com.gearsync.backend.repository.VehicleRepository;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import jakarta.transaction.Transactional;
-
 import java.math.BigDecimal;
-import java.security.SecureRandom;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class AdminServices {
 
-    private static final String UPPERCASE = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-    private static final String LOWERCASE = "abcdefghijklmnopqrstuvwxyz";
-    private static final String DIGITS = "0123456789";
-    private static final String SPECIALS = "!@#$%^&*()-_=+[]{}|;:,.<>?";
-    private static final String ALL = UPPERCASE + LOWERCASE + DIGITS + SPECIALS;
-    private static final SecureRandom random = new SecureRandom();
+//    private static final String UPPERCASE = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+//    private static final String LOWERCASE = "abcdefghijklmnopqrstuvwxyz";
+//    private static final String DIGITS = "0123456789";
+//    private static final String SPECIALS = "!@#$%^&*()-_=+[]{}|;:,.<>?";
+//    private static final String ALL = UPPERCASE + LOWERCASE + DIGITS + SPECIALS;
+//    private static final SecureRandom random = new SecureRandom();
 
 
     private final ModelMapper modelMapper;
@@ -43,6 +39,7 @@ public class AdminServices {
     private final PasswordManagementService passwordManagementService;
     private final AppointmentRepository appointmentRepository;
     private final ProjectRepository projectRepository;
+    private final VehicleRepository vehicleRepository;
 
 
     @Transactional
@@ -57,7 +54,7 @@ public class AdminServices {
             user.setIsFirstLogin(true);
             User savedUser = userRepository.save(user);
             String username = savedUser.getFirstName() + " " + savedUser.getLastName();
-            emailService.sendEmployeeWelcomeEmail(savedUser.getEmail(),username,generatedPassword,"Employee");
+            emailService.sendEmployeeWelcomeEmail(savedUser.getEmail(), username, generatedPassword, "Employee");
             Map<String, Object> response = new HashMap<>();
             response.put("user-email", savedUser.getEmail());
             response.put("message", "Employee added successfully");
@@ -66,6 +63,7 @@ public class AdminServices {
             throw new DuplicateResourceException("User with email " + employeeRegisterDTO.getEmail() + " already exists.");
         }
     }
+
     @Transactional
     public Map<String, Object> addAdmin(AdminRegisterDTO adminRegisterDTO) {
         try {
@@ -78,7 +76,7 @@ public class AdminServices {
             user.setIsFirstLogin(true);
             User savedUser = userRepository.save(user);
             String username = savedUser.getFirstName() + savedUser.getLastName();
-            emailService.sendEmployeeWelcomeEmail(savedUser.getEmail(),username,generatedPassword,"Admin");
+            emailService.sendEmployeeWelcomeEmail(savedUser.getEmail(), username, generatedPassword, "Admin");
             Map<String, Object> response = new HashMap<>();
             response.put("user-email", savedUser.getEmail());
             response.put("message", "Admin added successfully");
@@ -144,9 +142,14 @@ public class AdminServices {
                     existingNotes.isEmpty() ? note : existingNotes + "\n" + note
             );
         }
-
         Appointment updated = appointmentRepository.save(appointment);
-
+        String customerEmail = appointment.getCustomer().getEmail();
+        String vehicleRegistrationNumber = appointment.getVehicle().getRegistrationNumber();
+        String customerName = appointment.getCustomer().getFirstName() + " " + appointment.getCustomer().getLastName();
+        BigDecimal finalCost = appointment.getFinalCost() != null ?
+                appointment.getFinalCost() : BigDecimal.ZERO;
+        LocalDateTime scheduledDateTime = appointment.getScheduledDateTime();
+        emailService.sendCustomerAppointmentConfirmation(customerEmail,vehicleRegistrationNumber,customerName,scheduledDateTime,finalCost);
         List<Services> services = new ArrayList<>(appointment.getAppointmentServices());
         return convertAppointmentToResponseDTO(updated, services);
     }
@@ -476,6 +479,372 @@ public class AdminServices {
 
         dto.setCreatedAt(project.getCreatedAt());
         dto.setUpdatedAt(project.getUpdatedAt());
+
+        return dto;
+    }
+
+    @Transactional
+    public List<AppointmentSummaryDTO> getAllAppointments(String adminEmail) {
+        validateAdmin(adminEmail);
+        List<Appointment> appointments = appointmentRepository.findAll();
+        return appointments.stream()
+                .map(this::convertToAppointmentSummary)
+                .collect(Collectors.toList());
+    }
+
+    @Transactional
+    public List<AppointmentSummaryDTO> getAppointmentsByStatus(
+            String adminEmail,
+            String status) {
+
+        validateAdmin(adminEmail);
+
+        try {
+            AppointmentStatus appointmentStatus = AppointmentStatus.valueOf(status.toUpperCase());
+            List<Appointment> appointments = appointmentRepository.findByStatus(appointmentStatus);
+
+            return appointments.stream()
+                    .map(this::convertToAppointmentSummary)
+                    .collect(Collectors.toList());
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("Invalid status: " + status +
+                    ". Valid statuses: SCHEDULED, CONFIRMED, IN_PROGRESS, COMPLETED, CANCELLED, NO_SHOW, RESCHEDULED");
+        }
+    }
+
+    @Transactional
+    public List<ProjectSummaryDTO> getAllProjects(String adminEmail) {
+
+        validateAdmin(adminEmail);
+        List<Project> projects = projectRepository.findAll();
+
+        return projects.stream()
+                .map(this::convertToProjectSummary)
+                .collect(Collectors.toList());
+    }
+
+
+    @Transactional
+    public List<ProjectSummaryDTO> getProjectsByStatus(
+            String adminEmail,
+            String status) {
+
+        validateAdmin(adminEmail);
+
+        try {
+            ProjectStatus projectStatus = ProjectStatus.valueOf(status.toUpperCase());
+            List<Project> projects = projectRepository.findByStatus(projectStatus);
+
+            return projects.stream()
+                    .map(this::convertToProjectSummary)
+                    .collect(Collectors.toList());
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("Invalid status: " + status +
+                    ". Valid statuses: PENDING, APPROVED, IN_PROGRESS, ON_HOLD, COMPLETED, CANCELLED, REJECTED");
+        }
+    }
+
+    @Transactional
+    public List<AppointmentSummaryDTO> getPendingAppointments(String adminEmail) {
+        validateAdmin(adminEmail);
+        List<Appointment> appointments = appointmentRepository.findByStatus(AppointmentStatus.SCHEDULED);
+
+        return appointments.stream()
+                .filter(a -> a.getAssignedEmployee() == null)
+                .map(this::convertToAppointmentSummary)
+                .collect(Collectors.toList());
+    }
+
+    @Transactional
+    public List<ProjectSummaryDTO> getPendingProjects(String adminEmail) {
+
+        validateAdmin(adminEmail);
+
+        List<Project> projects = projectRepository.findByStatus(ProjectStatus.PENDING);
+
+        return projects.stream()
+                .map(this::convertToProjectSummary)
+                .collect(Collectors.toList());
+    }
+
+
+    @Transactional
+    public EmployeeDetailDTO getEmployeeDetails(String adminEmail, Long employeeId) {
+
+        validateAdmin(adminEmail);
+
+        User employee = userRepository.findById(employeeId)
+                .orElseThrow(() -> new ResourceNotFoundException("Employee not found with ID: " + employeeId));
+
+        if (employee.getRole() != Role.EMPLOYEE && employee.getRole() != Role.ADMIN) {
+            throw new IllegalArgumentException("User is not an employee");
+        }
+
+        List<Appointment> appointments = appointmentRepository.findByAssignedEmployeeId(employeeId);
+        List<Project> projects = projectRepository.findByAssignedEmployeeId(employeeId);
+
+        long completedAppointments = appointments.stream()
+                .filter(a -> a.getStatus() == AppointmentStatus.COMPLETED)
+                .count();
+
+        long completedProjects = projects.stream()
+                .filter(p -> p.getStatus() == ProjectStatus.COMPLETED)
+                .count();
+
+        EmployeeDetailDTO dto = new EmployeeDetailDTO();
+        dto.setId(employee.getId());
+        dto.setEmail(employee.getEmail());
+        dto.setFirstName(employee.getFirstName());
+        dto.setLastName(employee.getLastName());
+        dto.setPhoneNumber(employee.getPhoneNumber());
+        dto.setRole(employee.getRole().name());
+        dto.setIsActive(employee.getIsActive());
+        dto.setIsPasswordChanged(employee.getIsPasswordChanged());
+        dto.setLastLoginAt(employee.getLastLoginAt());
+        dto.setCreatedAt(employee.getCreatedAt());
+        dto.setAssignedAppointmentsCount((long) appointments.size());
+        dto.setAssignedProjectsCount((long) projects.size());
+        dto.setCompletedAppointmentsCount(completedAppointments);
+        dto.setCompletedProjectsCount(completedProjects);
+
+        return dto;
+    }
+
+
+    @Transactional
+    public EmployeeDetailDTO updateEmployee(
+            String adminEmail,
+            Long employeeId,
+            UpdateEmployeeDTO request) {
+
+
+        validateAdmin(adminEmail);
+
+        User employee = userRepository.findById(employeeId)
+                .orElseThrow(() -> new ResourceNotFoundException("Employee not found with ID: " + employeeId));
+
+        if (employee.getRole() != Role.EMPLOYEE && employee.getRole() != Role.ADMIN) {
+            throw new IllegalArgumentException("User is not an employee");
+        }
+
+        employee.setFirstName(request.getFirstName().trim());
+        employee.setLastName(request.getLastName().trim());
+        employee.setPhoneNumber(request.getPhoneNumber().trim());
+        employee.setIsActive(request.getIsActive());
+
+        userRepository.save(employee);
+
+        return getEmployeeDetails(adminEmail, employeeId);
+    }
+
+    @Transactional
+    public List<UserDto> getAllEmployees(String adminEmail) {
+
+        validateAdmin(adminEmail);
+
+        List<User> employees = userRepository.findAllEmployees();
+
+        return employees.stream()
+                .map(emp -> {
+                    UserDto dto = new UserDto();
+                    dto.setId(emp.getId());
+                    dto.setName(emp.getFirstName() + " " + emp.getLastName());
+                    dto.setEmail(emp.getEmail());
+                    dto.setRole(emp.getRole().name());
+                    dto.setIsActive(emp.getIsActive());
+                    return dto;
+                })
+                .collect(Collectors.toList());
+    }
+
+
+    @Transactional
+    public List<UserDto> getActiveEmployees(String adminEmail) {
+
+        validateAdmin(adminEmail);
+
+        List<User> employees = userRepository.findActiveEmployees();
+
+        return employees.stream()
+                .map(emp -> {
+                    UserDto dto = new UserDto();
+                    dto.setId(emp.getId());
+                    dto.setName(emp.getFirstName() + " " + emp.getLastName());
+                    dto.setEmail(emp.getEmail());
+                    dto.setRole(emp.getRole().name());
+                    dto.setIsActive(true);
+                    return dto;
+                })
+                .collect(Collectors.toList());
+    }
+
+    private void validateAdmin(String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+        if (user.getRole() != Role.ADMIN) {
+            throw new UnauthorizedException("Only admins can access this resource");
+        }
+    }
+
+    private AppointmentSummaryDTO convertToAppointmentSummary(Appointment appointment) {
+        AppointmentSummaryDTO dto = new AppointmentSummaryDTO();
+        dto.setId(appointment.getId());
+        dto.setScheduledDateTime(appointment.getScheduledDateTime());
+        dto.setStatus(appointment.getStatus().name());
+        dto.setCustomerName(appointment.getCustomer().getFirstName() + " " + appointment.getCustomer().getLastName());
+        dto.setCustomerEmail(appointment.getCustomer().getEmail());
+        dto.setVehicleRegistrationNumber(appointment.getVehicle().getRegistrationNumber());
+        dto.setVehicleMake(appointment.getVehicle().getMake());
+        dto.setVehicleModel(appointment.getVehicle().getModel());
+
+        if (appointment.getAssignedEmployee() != null) {
+            dto.setAssignedEmployeeName(
+                    appointment.getAssignedEmployee().getFirstName() + " " +
+                            appointment.getAssignedEmployee().getLastName()
+            );
+        } else {
+            dto.setAssignedEmployeeName("Unassigned");
+        }
+
+        dto.setProgressPercentage(appointment.getProgressPercentage());
+        dto.setCreatedAt(appointment.getCreatedAt());
+
+        return dto;
+    }
+
+    private ProjectSummaryDTO convertToProjectSummary(Project project) {
+        ProjectSummaryDTO dto = new ProjectSummaryDTO();
+        dto.setId(project.getId());
+        dto.setProjectName(project.getProjectName());
+        dto.setStatus(project.getStatus().name());
+        dto.setCustomerName(project.getCustomer().getFirstName() + " " + project.getCustomer().getLastName());
+        dto.setCustomerEmail(project.getCustomer().getEmail());
+        dto.setVehicleRegistrationNumber(project.getVehicle().getRegistrationNumber());
+
+        if (project.getAssignedEmployee() != null) {
+            dto.setAssignedEmployeeName(
+                    project.getAssignedEmployee().getFirstName() + " " +
+                            project.getAssignedEmployee().getLastName()
+            );
+        } else {
+            dto.setAssignedEmployeeName("Unassigned");
+        }
+
+        dto.setEstimatedCost(project.getEstimatedCost());
+        dto.setProgressPercentage(project.getProgressPercentage());
+        dto.setCreatedAt(project.getCreatedAt());
+
+        return dto;
+    }
+
+    @Transactional
+    public List<AppointmentResponseDTO> getAllAppointments() {
+        List<Appointment> all = appointmentRepository.findAllWithDetails();
+
+        return all.stream()
+                .map(a -> {
+                    List<Services> services = new ArrayList<>();
+                    Set<Services> svcSet = a.getAppointmentServices();
+                    if (svcSet != null && !svcSet.isEmpty()) {
+                        services = new ArrayList<>(svcSet);
+                    }
+                    return convertAppointmentToResponseDTO(a, services);
+                })
+                .collect(Collectors.toList());
+    }
+
+    @Transactional
+    public List<VehicleSummaryDTO> getAllVehicles(String adminEmail) {
+
+        validateAdmin(adminEmail);
+
+        List<Vehicle> vehicles = vehicleRepository.findAll();
+
+        return vehicles.stream()
+                .map(this::convertToVehicleSummary)
+                .collect(Collectors.toList());
+    }
+
+    @Transactional
+    public List<CustomerWithVehiclesDTO> getAllCustomersWithVehicles(String adminEmail) {
+
+        validateAdmin(adminEmail);
+
+        List<User> customers = userRepository.findByRole(Role.CUSTOMER);
+
+        return customers.stream()
+                .map(this::convertToCustomerWithVehicles)
+                .collect(Collectors.toList());
+    }
+
+    @Transactional
+    public CustomerWithVehiclesDTO getCustomerWithVehicles(String adminEmail, Long customerId) {
+
+        validateAdmin(adminEmail);
+
+        User customer = userRepository.findById(customerId)
+                .orElseThrow(() -> new ResourceNotFoundException("Customer not found with ID: " + customerId));
+
+        if (customer.getRole() != Role.CUSTOMER) {
+            throw new IllegalArgumentException("User is not a customer");
+        }
+
+        return convertToCustomerWithVehicles(customer);
+    }
+
+    private VehicleSummaryDTO convertToVehicleSummary(Vehicle vehicle) {
+        VehicleSummaryDTO dto = new VehicleSummaryDTO();
+        dto.setId(vehicle.getId());
+        dto.setRegistrationNumber(vehicle.getRegistrationNumber());
+        dto.setMake(vehicle.getMake());
+        dto.setModel(vehicle.getModel());
+        dto.setYear(vehicle.getYear());
+        dto.setColor(vehicle.getColor());
+        dto.setVinNumber(vehicle.getVinNumber());
+        dto.setMileage(vehicle.getMileage());
+
+        User owner = vehicle.getOwner();
+        dto.setOwnerName(owner.getFirstName() + " " + owner.getLastName());
+        dto.setOwnerEmail(owner.getEmail());
+        dto.setOwnerPhone(owner.getPhoneNumber());
+        dto.setCreatedAt(vehicle.getCreatedAt());
+
+        return dto;
+    }
+
+    private CustomerWithVehiclesDTO convertToCustomerWithVehicles(User customer) {
+        CustomerWithVehiclesDTO dto = new CustomerWithVehiclesDTO();
+        dto.setId(customer.getId());
+        dto.setEmail(customer.getEmail());
+        dto.setFirstName(customer.getFirstName());
+        dto.setLastName(customer.getLastName());
+        dto.setPhoneNumber(customer.getPhoneNumber());
+        dto.setIsActive(customer.getIsActive());
+        dto.setCreatedAt(customer.getCreatedAt());
+
+        List<Vehicle> vehicles = vehicleRepository.findByOwnerId(customer.getId());
+        List<VehicleInfoDTO> vehicleInfos = vehicles.stream()
+                .map(vehicle -> {
+                    VehicleInfoDTO vDto = new VehicleInfoDTO();
+                    vDto.setId(vehicle.getId());
+                    vDto.setRegistrationNumber(vehicle.getRegistrationNumber());
+                    vDto.setMake(vehicle.getMake());
+                    vDto.setModel(vehicle.getModel());
+                    vDto.setYear(vehicle.getYear());
+                    vDto.setColor(vehicle.getColor());
+                    return vDto;
+                })
+                .collect(Collectors.toList());
+
+        dto.setVehicles(vehicleInfos);
+        dto.setTotalVehicles(vehicles.size());
+
+        List<Appointment> appointments = appointmentRepository.findByCustomerId(customer.getId());
+        List<Project> projects = projectRepository.findByCustomerId(customer.getId());
+
+        dto.setTotalAppointments(appointments.size());
+        dto.setTotalProjects(projects.size());
 
         return dto;
     }

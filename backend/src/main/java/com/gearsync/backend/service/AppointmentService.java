@@ -17,6 +17,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -29,6 +30,7 @@ public class AppointmentService {
     private final ServiceRepository serviceRepository;
     private final ModelMapper modelMapper;
 
+    private static final Set<String> ALLOWED_CUSTOMER_STATUSES = new HashSet<>( List.of("SCHEDULED", "CONFIRMED", "RESCHEDULED") );
 
     @Transactional
     public AppointmentResponseDTO bookAppointment(String customerEmail, AppointmentRequestDTO request) {
@@ -345,11 +347,18 @@ public class AppointmentService {
         Appointment appointment = appointmentRepository.findById(appointmentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Appointment not found"));
 
+        String normalizedStatus = String.valueOf(appointment.getStatus()).trim().toUpperCase();
+
+        if (!ALLOWED_CUSTOMER_STATUSES.contains(normalizedStatus)) {
+            throw new IllegalStateException("Only appointments with status SCHEDULED, CONFIRMED, or RESCHEDULED can be deleted");
+        }
+
         if (!appointment.getCustomer().getId().equals(customer.getId())) {
             throw new UnauthorizedException("You can only delete your own appointments");
         }
 
-        appointmentRepository.delete(appointment);
+        appointmentRepository.deleteById(appointment.getId());
+        appointmentRepository.flush();
     }
 
 }

@@ -1,112 +1,132 @@
 // src/api/admin.ts
 import api from "./auth";
 
-export type Role = "CUSTOMER" | "EMPLOYEE" | "ADMIN";
-
-export interface User {
-  id: number;
-  firstName: string;
-  lastName: string;
+export interface EmployeeRegisterPayload {
   email: string;
-  phoneNumber: string;
-  role: Role;
-  isActive: boolean;
-  createdAt: string; // ISO string
-}
-
-export interface EmployeeRegisterDTO {
-  firstName: string;
-  lastName: string;
-  email: string;
-  phoneNumber: string;
-  password: string;
-}
-
-// Admin has same shape as employee creation:
-export type AdminRegisterDTO = EmployeeRegisterDTO;
-
-export const addEmployee = async (payload: EmployeeRegisterDTO): Promise<User> => {
-  const { data } = await api.post<User>("/admin/employees", payload);
-  return data;
-};
-
-export const addAdmin = async (payload: AdminRegisterDTO): Promise<User> => {
-  const { data } = await api.post<User>("/admin/admins", payload);
-  return data;
-};
-
-export const listEmployees = async (): Promise<User[]> => {
-  const { data } = await api.get<User[]>("/admin/employees");
-  return data;
-};
-
-// User Management
-export interface UpdateUserDTO {
   firstName?: string;
   lastName?: string;
+  phoneNumber?: string;
+  // role is optional; server defaults to EMPLOYEE
+  role?: "EMPLOYEE";
+}
+
+export interface AdminRegisterPayload {
+  email: string;
+  firstName?: string;
+  lastName?: string;
+  phoneNumber?: string;
+  // role is optional; server defaults to ADMIN
+  role?: "ADMIN";
+}
+
+// Create Employee
+export const addEmployee = async (payload: EmployeeRegisterPayload) => {
+  const res = await api.post("admin/employees", payload);
+  return res.data;
+};
+
+// Create Admin
+export const addAdmin = async (payload: AdminRegisterPayload) => {
+  const res = await api.post("admin/admins", payload);
+  return res.data;
+};
+
+// List employees (AdminController returns simplified DTO with name/email/role)
+export const listEmployees = async () => {
+  const res = await api.get("admin/employees");
+  return Array.isArray(res.data) ? res.data : [];
+};
+
+export interface EmployeeLite {
+  id: number;         // NEEDS to be present from backend
+  name: string;       // "First Last"
+  email: string;
+  role: "EMPLOYEE" | "ADMIN" | "CUSTOMER";
+  phoneNumber?: string;
+}
+
+// Dashboard Stats Interfaces
+export interface DashboardStats {
+  userCount: number;
+  appointmentCount: number;
+  vehicleCount: number;
+  totalEarnings: number;
+  activeServiceCount: number;
+  confirmedAppointments: any[];
+  todayAppointments: any[];
+}
+// A vehicle summary for admin context
+export interface AdminCustomerVehicleDTO {
+  id?: number;
+  registrationNumber?: string;
+  make?: string;
+  model?: string;
+  year?: number | string;
+  color?: string;
+  vinNumber?: string;
+  mileage?: number;
+  createdAt?: string;
+  updatedAt?: string;
+}
+// Mirrors (loosely) CustomerWithVehiclesDTO from backend
+export interface AdminCustomerWithVehiclesDTO {
+  id?: number;
+  firstName?: string;
+  lastName?: string;
+  name?: string; // if backend already concatenates
   email?: string;
   phoneNumber?: string;
   isActive?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+  vehicles?: AdminCustomerVehicleDTO[];
 }
 
-export const updateUser = async (userId: number, payload: UpdateUserDTO): Promise<User> => {
-  const { data } = await api.put<User>(`/admin/users/${userId}`, payload);
-  return data;
+// Dashboard API Calls
+export const getDashboardUserCount = async (): Promise<number> => {
+  const res = await api.get("admin/dashboard/user/count");
+  return res.data;
 };
 
-export const deleteUser = async (userId: number): Promise<void> => {
-  await api.delete(`/admin/users/${userId}`);
+export const getDashboardAppointmentCount = async (): Promise<number> => {
+  const res = await api.get("admin/dashboard/appointment/count");
+  return res.data;
 };
 
-export const toggleUserStatus = async (userId: number, isActive: boolean): Promise<User> => {
-  const { data } = await api.put<User>(`/admin/users/${userId}/status`, { isActive });
-  return data;
+export const getDashboardVehicleCount = async (): Promise<number> => {
+  const res = await api.get("admin/dashboard/vehicle/count");
+  return res.data;
 };
 
-// ----- Appointments
-export interface AssignAppointmentDTO { employeeId: number; }
-
-export const assignEmployeeToAppointment = async (
-  id: number,
-  payload: AssignAppointmentDTO
-): Promise<void> => {
-  await api.put(`/admin/appointments/${id}/assign`, payload);
+export const getDashboardTotalEarnings = async (): Promise<number> => {
+  const res = await api.get("admin/dashboard/earnings/total");
+  return res.data;
 };
 
-export const reassignEmployeeToAppointment = async (
-  id: number,
-  payload: AssignAppointmentDTO
-): Promise<void> => {
-  await api.put(`/admin/appointments/${id}/reassign`, payload);
+export const getDashboardActiveServiceCount = async (): Promise<number> => {
+  const res = await api.get("admin/dashboard/services/active/count");
+  return res.data;
 };
 
-export const unassignEmployeeFromAppointment = async (id: number): Promise<void> => {
-  await api.delete(`/admin/appointments/${id}/unassign`);
+export const getDashboardConfirmedAppointments = async (): Promise<any[]> => {
+  const res = await api.get("admin/dashboard/appointments/confirmed");
+  return Array.isArray(res.data) ? res.data : [];
 };
 
-// ----- Projects
-export interface ApproveProjectDTO { employeeId: number; notes?: string; }
-export interface RejectProjectDTO { reason: string; }
-export interface AssignProjectDTO { employeeId: number; }
-
-export const approveAndAssignProject = async (
-  id: number,
-  payload: ApproveProjectDTO
-): Promise<void> => {
-  await api.put(`/admin/projects/${id}/approve`, payload);
+export const getDashboardTodayAppointments = async (): Promise<any[]> => {
+  const res = await api.get("admin/dashboard/appointments/today");
+  return Array.isArray(res.data) ? res.data : [];
 };
 
-export const rejectProject = async (id: number, payload: RejectProjectDTO): Promise<void> => {
-  await api.put(`/admin/projects/${id}/reject`, payload);
+export const listCustomersWithVehicles = async (): Promise<AdminCustomerWithVehiclesDTO[]> => {
+  const res = await api.get<AdminCustomerWithVehiclesDTO[]>("admin/customers");
+  return Array.isArray(res.data) ? res.data : [];
 };
 
-export const assignEmployeeToProject = async (
-  id: number,
-  payload: AssignProjectDTO
-): Promise<void> => {
-  await api.put(`/admin/projects/${id}/assign`, payload);
-};
-
-export const unassignEmployeeFromProject = async (id: number): Promise<void> => {
-  await api.delete(`/admin/projects/${id}/unassign`);
+// GET: one customer (by id) with their vehicles
+export const getCustomerWithVehicles = async (
+  customerId: number
+): Promise<AdminCustomerWithVehiclesDTO> => {
+  const res = await api.get<AdminCustomerWithVehiclesDTO>(`admin/customers/${customerId}`);
+  return res.data;
 };

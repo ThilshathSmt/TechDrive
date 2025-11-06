@@ -86,7 +86,7 @@ const MyVehicles: React.FC = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-gray-600 text-sm">Total Vehicles</p>
-              <p className="text-2xl font-bold text-gray-900">{vehicles.length}</p>
+              <p className="text-2xl font-bold text-gray-900">{vehicles?.length || 0}</p>
             </div>
             <Car className="w-10 h-10 text-green-500" />
           </div>
@@ -100,7 +100,7 @@ const MyVehicles: React.FC = () => {
             <div className="inline-block w-8 h-8 border-4 border-green-600 border-t-transparent rounded-full animate-spin"></div>
             <p className="mt-4 text-gray-600">Loading vehicles...</p>
           </div>
-        ) : vehicles.length === 0 ? (
+        ) : !vehicles || vehicles.length === 0 ? (
           <div className="p-12 text-center">
             <Car className="w-16 h-16 text-gray-300 mx-auto mb-4" />
             <p className="text-gray-600">No vehicles yet</p>
@@ -115,12 +115,22 @@ const MyVehicles: React.FC = () => {
                 <div key={vehicle.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
                   <div className="flex items-center gap-3">
                     <Car className="w-8 h-8 text-green-600" />
-                    <div>
-                      <p className="font-bold text-gray-900">{vehicle.make} {vehicle.model}</p>
-                      <p className="text-sm text-gray-600">{vehicle.year}</p>
+                    <div className="flex-1">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <p className="font-bold text-gray-900">{vehicle.make} {vehicle.model}</p>
+                          <p className="text-sm text-gray-600">Year: {vehicle.year}</p>
+                        </div>
+                        <p className="text-sm font-medium text-gray-700">{vehicle.registrationNumber}</p>
+                      </div>
+                      <div className="mt-2 text-sm text-gray-600">
+                        <p>Color: {vehicle.color}</p>
+                        <p>Mileage: {vehicle.mileage.toLocaleString()} km</p>
+                        <p className="truncate">VIN: {vehicle.vinNumber}</p>
+                      </div>
                     </div>
                   </div>
-                  <div className="mt-2 flex gap-2">
+                  <div className="mt-3 pt-3 border-t border-gray-100 flex justify-end gap-2">
                     <button onClick={() => openEdit(vehicle)} className="text-blue-600 hover:underline text-sm">Edit</button>
                     <button onClick={() => handleDelete(vehicle.id)} className="text-red-600 hover:underline text-sm">Delete</button>
                   </div>
@@ -138,24 +148,32 @@ const MyVehicles: React.FC = () => {
             <h2 className="text-xl font-bold mb-4">{editVehicle ? "Edit Vehicle" : "Add Vehicle"}</h2>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
+                <label className="block text-sm font-medium text-gray-700">Registration Number</label>
+                <input type="text" value={form.registrationNumber || ""} onChange={e => setForm(f => ({...f, registrationNumber: e.target.value}))} required className="mt-1 block w-full border rounded-md px-2 py-1" placeholder="e.g. 123ABCS" />
+              </div>
+              <div>
                 <label className="block text-sm font-medium text-gray-700">Make</label>
-                <input type="text" value={form.make || ""} onChange={e => setForm(f => ({...f, make: e.target.value}))} required className="mt-1 block w-full border rounded-md px-2 py-1" />
+                <input type="text" value={form.make || ""} onChange={e => setForm(f => ({...f, make: e.target.value}))} required className="mt-1 block w-full border rounded-md px-2 py-1" placeholder="e.g. BMW" />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700">Model</label>
-                <input type="text" value={form.model || ""} onChange={e => setForm(f => ({...f, model: e.target.value}))} required className="mt-1 block w-full border rounded-md px-2 py-1" />
+                <input type="text" value={form.model || ""} onChange={e => setForm(f => ({...f, model: e.target.value}))} required className="mt-1 block w-full border rounded-md px-2 py-1" placeholder="e.g. X5" />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700">Year</label>
-                <input type="number" value={form.year || ""} onChange={e => setForm(f => ({...f, year: Number(e.target.value)}))} required className="mt-1 block w-full border rounded-md px-2 py-1" />
+                <input type="number" value={form.year || ""} onChange={e => setForm(f => ({...f, year: Number(e.target.value)}))} required className="mt-1 block w-full border rounded-md px-2 py-1" min="1900" max="2025" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">License Plate</label>
-                <input type="text" value={form.licensePlate || ""} onChange={e => setForm(f => ({...f, licensePlate: e.target.value}))} required className="mt-1 block w-full border rounded-md px-2 py-1" />
+                <label className="block text-sm font-medium text-gray-700">Color</label>
+                <input type="text" value={form.color || ""} onChange={e => setForm(f => ({...f, color: e.target.value}))} required className="mt-1 block w-full border rounded-md px-2 py-1" placeholder="e.g. Blue" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">VIN (optional)</label>
-                <input type="text" value={form.vin || ""} onChange={e => setForm(f => ({...f, vin: e.target.value}))} className="mt-1 block w-full border rounded-md px-2 py-1" />
+                <label className="block text-sm font-medium text-gray-700">VIN Number</label>
+                <input type="text" value={form.vinNumber || ""} onChange={e => setForm(f => ({...f, vinNumber: e.target.value}))} required className="mt-1 block w-full border rounded-md px-2 py-1" placeholder="e.g. 1HGCM82633A123886" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Mileage</label>
+                <input type="number" value={form.mileage || ""} onChange={e => setForm(f => ({...f, mileage: Number(e.target.value)}))} required className="mt-1 block w-full border rounded-md px-2 py-1" min="0" placeholder="e.g. 50000" />
               </div>
               {formError && <div className="text-red-600 text-sm">{formError}</div>}
               <div className="flex justify-end gap-2">

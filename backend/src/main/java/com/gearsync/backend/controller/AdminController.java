@@ -3,12 +3,12 @@ package com.gearsync.backend.controller;
 import com.gearsync.backend.dto.*;
 import com.gearsync.backend.exception.DuplicateResourceException;
 import com.gearsync.backend.exception.ResourceNotFoundException;
+import com.gearsync.backend.exception.UnauthorizedException;
 import com.gearsync.backend.model.User;
 import com.gearsync.backend.repository.UserRepository;
 import com.gearsync.backend.service.AdminServices;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.modelmapper.ModelMapper;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -23,7 +23,6 @@ public class AdminController {
 
     public final AdminServices adminServices;
     private final UserRepository userRepository;
-    private final ModelMapper modelMapper;
 
     @PostMapping("/employees")
     public ResponseEntity<?> addEmployee(@Valid @RequestBody EmployeeRegisterDTO employeeRegisterDTO) {
@@ -58,9 +57,15 @@ public class AdminController {
             List<UserDto> userDtos = users.stream()
                     .map(user -> {
                         UserDto dto = new UserDto();
+                        dto.setId(user.getId()); 
                         dto.setName(user.getFirstName() + " " + user.getLastName());
                         dto.setEmail(user.getEmail());
-                        dto.setRole(String.valueOf(user.getRole()));
+                        dto.setLastName(user.getLastName());
+                        dto.setFirstName(user.getFirstName());
+                        dto.setPhoneNumber(user.getPhoneNumber());
+                        dto.setRole(user.getRole().name());
+                        dto.setIsActive(user.getIsActive());
+                        dto.setCreatedAt(user.getCreatedAt());
                         return dto;
                     })
                     .toList();
@@ -249,4 +254,206 @@ public class AdminController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
         }
     }
+
+    @GetMapping("/appointments")
+    public ResponseEntity<?> getAllAppointments(Authentication authentication) {
+        try {
+            List<AppointmentSummaryDTO> appointments = adminServices.getAllAppointments(
+                    authentication.getName()
+            );
+            return ResponseEntity.ok(appointments);
+        } catch (UnauthorizedException e) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+        }
+    }
+
+    @GetMapping("/appointments/filter")
+    public ResponseEntity<?> getAppointmentsByStatus(
+            Authentication authentication,
+            @RequestParam String status) {
+        try {
+            List<AppointmentSummaryDTO> appointments = adminServices.getAppointmentsByStatus(
+                    authentication.getName(),
+                    status
+            );
+            return ResponseEntity.ok(appointments);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        } catch (UnauthorizedException e) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+        }
+    }
+
+    @GetMapping("/appointments/pending")
+    public ResponseEntity<?> getPendingAppointments(Authentication authentication) {
+        try {
+            List<AppointmentSummaryDTO> appointments = adminServices.getPendingAppointments(
+                    authentication.getName()
+            );
+            return ResponseEntity.ok(appointments);
+        } catch (UnauthorizedException e) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+        }
+    }
+
+    @GetMapping("/projects")
+    public ResponseEntity<?> getAllProjects(Authentication authentication) {
+        try {
+            List<ProjectSummaryDTO> projects = adminServices.getAllProjects(
+                    authentication.getName()
+            );
+            return ResponseEntity.ok(projects);
+        } catch (UnauthorizedException e) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+        }
+    }
+
+    @GetMapping("/projects/filter")
+    public ResponseEntity<?> getProjectsByStatus(
+            Authentication authentication,
+            @RequestParam String status) {
+        try {
+            List<ProjectSummaryDTO> projects = adminServices.getProjectsByStatus(
+                    authentication.getName(),
+                    status
+            );
+            return ResponseEntity.ok(projects);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        } catch (UnauthorizedException e) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+        }
+    }
+
+    @GetMapping("/projects/pending")
+    public ResponseEntity<?> getPendingProjects(Authentication authentication) {
+        try {
+            List<ProjectSummaryDTO> projects = adminServices.getPendingProjects(
+                    authentication.getName()
+            );
+            return ResponseEntity.ok(projects);
+        } catch (UnauthorizedException e) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+        }
+    }
+
+    @GetMapping("/employees/{id}")
+    public ResponseEntity<?> getEmployeeDetails(
+            Authentication authentication,
+            @PathVariable Long id) {
+        try {
+            EmployeeDetailDTO employee = adminServices.getEmployeeDetails(
+                    authentication.getName(),
+                    id
+            );
+            return ResponseEntity.ok(employee);
+        } catch (ResourceNotFoundException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        } catch (UnauthorizedException e) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+        }
+    }
+
+    @PutMapping("/employees/{id}")
+    public ResponseEntity<?> updateEmployee(
+            Authentication authentication,
+            @PathVariable Long id,
+            @Valid @RequestBody UpdateEmployeeDTO request) {
+        try {
+            EmployeeDetailDTO employee = adminServices.updateEmployee(
+                    authentication.getName(),
+                    id,
+                    request
+            );
+            return ResponseEntity.ok(employee);
+        } catch (ResourceNotFoundException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        } catch (UnauthorizedException e) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+        }
+    }
+
+    @GetMapping("/employees/active")
+    public ResponseEntity<?> getActiveEmployees(Authentication authentication) {
+        try {
+            List<UserDto> employees = adminServices.getActiveEmployees(
+                    authentication.getName()
+            );
+            return ResponseEntity.ok(employees);
+        } catch (UnauthorizedException e) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+        }
+    }
+
+    @GetMapping("/vehicles")
+    public ResponseEntity<?> getAllVehicles(Authentication authentication) {
+        try {
+            List<VehicleSummaryDTO> vehicles = adminServices.getAllVehicles(
+                    authentication.getName()
+            );
+            return ResponseEntity.ok(vehicles);
+        } catch (UnauthorizedException e) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+        }
+    }
+
+    @GetMapping("/customers")
+    public ResponseEntity<?> getAllCustomersWithVehicles(Authentication authentication) {
+        try {
+            List<CustomerWithVehiclesDTO> customers = adminServices.getAllCustomersWithVehicles(
+                    authentication.getName()
+            );
+            return ResponseEntity.ok(customers);
+        } catch (UnauthorizedException e) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+        }
+    }
+
+    @GetMapping("/customers/{id}")
+    public ResponseEntity<?> getCustomerWithVehicles(
+            Authentication authentication,
+            @PathVariable Long id) {
+        try {
+            CustomerWithVehiclesDTO customer = adminServices.getCustomerWithVehicles(
+                    authentication.getName(),
+                    id
+            );
+            return ResponseEntity.ok(customer);
+        } catch (ResourceNotFoundException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        } catch (UnauthorizedException e) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+        }
+    }
+
 }

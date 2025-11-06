@@ -6,6 +6,7 @@ import com.gearsync.backend.model.User;
 import com.gearsync.backend.repository.UserRepository;
 import com.gearsync.backend.security.JwtUtil;
 import com.gearsync.backend.service.AuthService;
+import com.gearsync.backend.service.EmailService;
 import com.gearsync.backend.service.PasswordManagementService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -26,6 +27,7 @@ public class AuthController {
     private final PasswordManagementService passwordService;
     private final JwtUtil jwtUtil;
     private final UserRepository userRepository;
+    private final EmailService emailService;
 
     @GetMapping("/test")
     public String test() {
@@ -39,6 +41,8 @@ public class AuthController {
             return ResponseEntity.badRequest().body("Email already registered");
         }
         User saved = authService.register(userRegisterDTO);
+        String customerName = saved.getFirstName() + " " + saved.getLastName();
+        emailService.sendCustomerWelcomeEmail(saved.getEmail(), customerName);
         return ResponseEntity.ok(saved);
     }
 

@@ -91,7 +91,7 @@ const CustomerSidebar: React.FC = () => {
       <nav className="flex-1 py-6 px-3 space-y-2 overflow-y-auto">
         {menuItems.map((item) => {
           const Icon = item.icon;
-          const isActive = location.pathname === item.path;
+          const isActive = location.pathname.startsWith(item.path);
 
           return (
             <Link

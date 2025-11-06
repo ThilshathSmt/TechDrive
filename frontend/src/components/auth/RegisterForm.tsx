@@ -1,19 +1,60 @@
 import React, { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { register, RegisterRequest } from "../../api/auth";
+import { AlertCircle, CheckCircle2 } from "lucide-react";
 
 // Home accent sweep
 const ACCENT_GRADIENT = "bg-gradient-to-r from-cyan-400 via-sky-400 to-indigo-400";
 
 const RegisterForm: React.FC = () => {
+  const navigate = useNavigate();
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
+  const [emailError, setEmailError] = useState<string | null>(null);
+
+  const validate = () => {
+    if (!firstName.trim()) return "First name is required.";
+    if (!lastName.trim()) return "Last name is required.";
+    if (!email.trim()) return "Email is required.";
+    if (!/^\S+@\S+\.\S+$/.test(email)) return "Enter a valid email address.";
+    if (!phoneNumber.trim()) return "Phone number is required.";
+    if (password.length < 8) {
+      return "Password must be at least 8 characters.";
+    }
+    if (!/(?=.*[a-z])/.test(password)) {
+      return "Password must contain at least one lowercase letter.";
+    }
+    if (!/(?=.*[A-Z])/.test(password)) {
+      return "Password must contain at least one uppercase letter.";
+    }
+    if (!/(?=.*\d)/.test(password)) {
+      return "Password must contain at least one number.";
+    }
+    if (!/(?=.*[@$!%*?&])/.test(password)) {
+      return "Password must contain at least one special character (@$!%*?&).";
+    }
+    return null;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
+    setSuccess(false);
+
+    const validationError = validate();
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
+
     try {
+      setLoading(true);
       const payload: RegisterRequest = {
         firstName,
         lastName,
@@ -22,16 +63,36 @@ const RegisterForm: React.FC = () => {
         password,
         role: "CUSTOMER",
       };
-      console.log("Sending payload:", payload);
       const res = await register(payload);
-      console.log("Registered user:", res);
-      alert("Registered successfully!");
+      setSuccess(true);
+      // Navigate to login after 2 seconds
+      setTimeout(() => {
+        navigate("/login", { state: { message: "Registration successful! Please login." } });
+      }, 2000);
     } catch (error: any) {
-      console.error("Full error:", error);
-      console.error("Error response:", error.response?.data);
       const errorMessage =
-        error.response?.data?.message || error.response?.data || error.message;
-      alert("Error registering: " + errorMessage);
+        error.response?.data?.message ||
+        error.response?.data ||
+        error.message ||
+        "Error registering. Please try again.";
+      
+      // Check if it's an email already registered error
+      if (
+        error.response?.status === 400 &&
+        (errorMessage.includes("Email already registered") ||
+         errorMessage.includes("already exists") ||
+         errorMessage.includes("already registered"))
+      ) {
+        setError("This email is already registered. Please use a different email or try logging in.");
+        setEmailError("This email is already registered");
+        // Clear email field to encourage user to enter a different one
+        setEmail("");
+      } else {
+        setError(errorMessage);
+        setEmailError(null);
+      }
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -79,7 +140,40 @@ const RegisterForm: React.FC = () => {
               </p>
             </div>
 
-            {/* UI updated only — fields unchanged */}
+            {error && (
+              <div
+                role="alert"
+                aria-live="polite"
+                className="mb-4 flex items-start gap-2 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-300"
+              >
+                <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                <div className="flex-1">
+                  <span>{error}</span>
+                  {error.includes("already registered") && (
+                    <div className="mt-2">
+                      <Link
+                        to="/login"
+                        className="text-red-200 hover:text-red-100 underline underline-offset-2"
+                      >
+                        Click here to login instead
+                      </Link>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {success && (
+              <div
+                role="alert"
+                aria-live="polite"
+                className="mb-4 flex items-start gap-2 rounded-lg border border-green-500/30 bg-green-500/10 px-3 py-2 text-sm text-green-300"
+              >
+                <CheckCircle2 className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                <span>Registration successful! Redirecting to login...</span>
+              </div>
+            )}
+
             <form onSubmit={handleSubmit} className="flex flex-col gap-4">
               <input
                 value={firstName}
@@ -96,13 +190,30 @@ const RegisterForm: React.FC = () => {
                 required
               />
 
-              <input
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="Email"
-                className="w-full rounded-lg border border-white/10 bg-white/5 px-4 py-3 text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-cyan-300"
-                required
-              />
+              <div>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    setEmailError(null); // Clear email error when user types
+                    setError(null); // Clear general error when user types
+                  }}
+                  placeholder="Email"
+                  className={`w-full rounded-lg border ${
+                    emailError
+                      ? "border-red-500/50 bg-red-500/5"
+                      : "border-white/10 bg-white/5"
+                  } px-4 py-3 text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 ${
+                    emailError ? "focus:ring-red-300" : "focus:ring-cyan-300"
+                  }`}
+                  required
+                  autoComplete="email"
+                />
+                {emailError && (
+                  <p className="mt-1 text-xs text-red-400">{emailError}</p>
+                )}
+              </div>
               <input
                 value={phoneNumber}
                 onChange={(e) => setPhoneNumber(e.target.value)}
@@ -120,11 +231,19 @@ const RegisterForm: React.FC = () => {
               />
               <button
                 type="submit"
-                className={`w-full ${ACCENT_GRADIENT} text-slate-950 font-semibold py-3 rounded-lg shadow-lg shadow-cyan-500/20 hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300`}
+                disabled={loading || success}
+                className={`w-full ${ACCENT_GRADIENT} text-slate-950 font-semibold py-3 rounded-lg shadow-lg shadow-cyan-500/20 hover:brightness-110 disabled:opacity-60 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300`}
               >
-                Register
+                {loading ? "Registering..." : success ? "Registered!" : "Register"}
               </button>
             </form>
+
+            <div className="mt-4 text-sm text-slate-400 text-center">
+              Already have an account?{' '}
+              <Link to="/login" className="text-cyan-300 hover:text-cyan-200 underline-offset-4 hover:underline">
+                Log In
+              </Link>
+            </div>
           </div>
         </div>
       </div>

@@ -19,7 +19,7 @@ public class TaskService {
     private final ServiceRepository serviceRepository;
 
     @Transactional
-    public Services newServiceAdd(ServiceDTO serviceDTO) {
+    public void newServiceAdd(ServiceDTO serviceDTO) {
         if (serviceRepository.existsByServiceName(serviceDTO.getServiceName())) {
             throw new DuplicateResourceException("Service name already exists: "+ serviceDTO.getServiceName());
         }
@@ -31,7 +31,7 @@ public class TaskService {
         services.setEstimatedDurationMinutes(serviceDTO.getEstimatedDurationMinutes());
         services.setCategory(serviceDTO.getCategory());
 
-        return serviceRepository.save(services);
+        serviceRepository.save(services);
     }
 
     @Transactional(readOnly = true)

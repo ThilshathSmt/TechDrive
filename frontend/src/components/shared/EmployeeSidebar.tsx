@@ -40,16 +40,16 @@ const EmployeeSidebar: React.FC = () => {
       icon: Clock,
       path: "/employee-dashboard/timelogs",
     },
-    {
-      title: "Tasks",
-      icon: CheckSquare,
-      path: "/employee-dashboard/tasks",
-    },
-    {
-      title: "Services",
-      icon: Wrench,
-      path: "/employee-dashboard/services",
-    },
+    // {
+    //   title: "Tasks",
+    //   icon: CheckSquare,
+    //   path: "/employee-dashboard/tasks",
+    // },
+    // {
+    //   title: "Services",
+    //   icon: Wrench,
+    //   path: "/employee-dashboard/services",
+    // },
     {
       title: "Profile",
       icon: User,
