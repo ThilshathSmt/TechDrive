@@ -12,6 +12,8 @@ import VerifyOtp from "./components/auth/VerifyOtp";
 import ResetPassword from "./components/auth/ResetPassword";
 import ChangePassword from "./components/auth/ChangePassword";
 import Service from "./pages/Services";
+import About from "./pages/About";
+import Contact from "./pages/Contact";
 
 // Admin Pages
 import AdminDashboard from "./pages/Admin/AdminDashboard";
@@ -42,6 +44,7 @@ import TimeLogs from "./pages/Employee/TimeLogs";
 import Tasks from "./pages/Employee/Tasks";
 import Services from "./pages/Employee/Services";
 import EmployeeProfile from "./pages/Employee/EmployeeProfile";
+import { i } from "node_modules/framer-motion/dist/types.d-BJcRxCew";
 
 // Component to conditionally render Navbar
 const ConditionalNavbar: React.FC = () => {
@@ -77,6 +80,9 @@ const App: React.FC = () => {
           <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/change-password" element={<ChangePassword />} />
           <Route path="/service" element={<Service />} />
+          <Route path="/about" element={<About />} />
+          <Route path="/contact" element={<Contact />} />
+
           {/* Admin Routes with Layout */}
           <Route
             path="/admin-dashboard"

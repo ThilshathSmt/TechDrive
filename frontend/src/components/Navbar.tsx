@@ -124,8 +124,8 @@ const Navbar: React.FC<NavbarProps> = ({ theme = "cyanIndigo" }) => {
             <Link to="/about" className={isActive("/about")}>
               About
             </Link>
-            <Link to="/appointments" className={isActive("/appointments")}>
-              Customer Appointment
+            <Link to="/contact" className={isActive("/contact")}>
+              Contact
             </Link>
 
             <button
@@ -162,11 +162,11 @@ const Navbar: React.FC<NavbarProps> = ({ theme = "cyanIndigo" }) => {
               About
             </Link>
             <Link
-              to="/appointments"
+              to="/contact"
               className="block rounded-lg px-3 py-2 hover:bg-white/10"
               onClick={() => setOpen(false)}
             >
-              Customer Appointment
+              Contact
             </Link>
             <button
               type="button"
