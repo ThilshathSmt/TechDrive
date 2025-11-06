@@ -26,6 +26,7 @@ import Settings from "./pages/Admin/Settings";
 import ProjectsManagement from "./pages/Admin/ProjectsManagement";
 import AdminCustomers from "./pages/Admin/CustomerDetails";
 import AdminCustomerDetails from "./pages/Admin/AdminCustomerDetails";
+import AdminProfile from "./pages/Admin/AdminProfile";
 
 // Customer Pages
 import CustomerDashboard from "./pages/Customer/CustomerDashboard";
@@ -44,7 +45,6 @@ import TimeLogs from "./pages/Employee/TimeLogs";
 import Tasks from "./pages/Employee/Tasks";
 import Services from "./pages/Employee/Services";
 import EmployeeProfile from "./pages/Employee/EmployeeProfile";
-import { i } from "node_modules/framer-motion/dist/types.d-BJcRxCew";
 
 // Component to conditionally render Navbar
 const ConditionalNavbar: React.FC = () => {
@@ -102,6 +102,7 @@ const App: React.FC = () => {
             <Route path="/admin-dashboard/customers/:id" element={<AdminCustomerDetails />} />
             <Route path="reports" element={<Reports />} />
             <Route path="settings" element={<Settings />} />
+            <Route path="profile" element={<AdminProfile />} />
           </Route>
 
           {/* Employee Routes with Layout */}

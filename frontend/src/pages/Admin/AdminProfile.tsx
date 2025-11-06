@@ -1,30 +1,21 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { User, Mail, Phone, Save, Lock, Calendar, Shield, AlertCircle, CheckCircle2, Loader2, X } from "lucide-react";
-import { getProfile, updateCustomerProfile, ProfileResponse } from "../../api/profile";
+import { User, Mail, Phone, Lock, Calendar, Shield, AlertCircle, Loader2, Save, X } from "lucide-react";
+import { getProfile, ProfileResponse } from "../../api/profile";
+import { getEmployeeDetails, updateEmployee, UpdateEmployeeDTO } from "../../api/admin";
 import { useAuth } from "../../hooks/useAuth";
 import { format } from "date-fns";
 import ProfilePicture from "../../components/profile/ProfilePicture";
 
-const Profile: React.FC = () => {
+const AdminProfile: React.FC = () => {
   const auth = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
   const [profile, setProfile] = useState<ProfileResponse | null>(null);
-  const [formData, setFormData] = useState({
-    firstName: "",
-    lastName: "",
-    phoneNumber: "",
-  });
-  const [formErrors, setFormErrors] = useState<{
-    firstName?: string;
-    lastName?: string;
-    phoneNumber?: string;
-  }>({});
+  const [isEditing, setIsEditing] = useState(false);
+  const [formData, setFormData] = useState<UpdateEmployeeDTO | null>(null);
 
   // Fetch profile on mount
   useEffect(() => {
@@ -32,13 +23,37 @@ const Profile: React.FC = () => {
       try {
         setLoading(true);
         setError(null);
-        const data = await getProfile(auth.role || "CUSTOMER");
-        setProfile(data);
-        setFormData({
-          firstName: data.firstName || "",
-          lastName: data.lastName || "",
-          phoneNumber: data.phoneNumber || "",
-        });
+        // Get basic profile
+        const basicProfile = await getProfile(auth.role || "ADMIN");
+        setProfile(basicProfile);
+        
+        // If we have an ID, get full employee details for editing
+        if (basicProfile.id) {
+          try {
+            const fullDetails = await getEmployeeDetails(basicProfile.id);
+            setFormData({
+              firstName: fullDetails.firstName,
+              lastName: fullDetails.lastName,
+              phoneNumber: fullDetails.phoneNumber,
+              isActive: fullDetails.isActive,
+            });
+          } catch (err) {
+            // If we can't get full details, use basic profile data
+            setFormData({
+              firstName: basicProfile.firstName,
+              lastName: basicProfile.lastName,
+              phoneNumber: basicProfile.phoneNumber || "",
+              isActive: basicProfile.isActive !== false,
+            });
+          }
+        } else {
+          setFormData({
+            firstName: basicProfile.firstName,
+            lastName: basicProfile.lastName,
+            phoneNumber: basicProfile.phoneNumber || "",
+            isActive: basicProfile.isActive !== false,
+          });
+        }
       } catch (err: any) {
         const errorMsg =
           err?.response?.data?.message ||
@@ -56,61 +71,44 @@ const Profile: React.FC = () => {
     }
   }, [auth.role]);
 
-  const validate = () => {
-    const errors: typeof formErrors = {};
+  // Handle save
+  const handleSave = async () => {
+    if (!profile?.id || !formData) return;
 
-    // First name validation
-    if (!formData.firstName.trim()) {
-      errors.firstName = "First name is required";
-    } else if (formData.firstName.trim().length < 2 || formData.firstName.trim().length > 50) {
-      errors.firstName = "First name must be between 2-50 characters";
+    // Validate
+    if (!formData.firstName.trim() || formData.firstName.trim().length < 2 || formData.firstName.trim().length > 50) {
+      setError("First name must be between 2-50 characters");
+      return;
     }
-
-    // Last name validation
-    if (!formData.lastName.trim()) {
-      errors.lastName = "Last name is required";
-    } else if (formData.lastName.trim().length < 2 || formData.lastName.trim().length > 50) {
-      errors.lastName = "Last name must be between 2-50 characters";
+    if (!formData.lastName.trim() || formData.lastName.trim().length < 2 || formData.lastName.trim().length > 50) {
+      setError("Last name must be between 2-50 characters");
+      return;
     }
-
-    // Phone number validation (Sri Lankan format: 0(7[0-9]{8}))
-    if (!formData.phoneNumber.trim()) {
-      errors.phoneNumber = "Phone number is required";
-    } else if (!/^0(7[0-9]{8})$/.test(formData.phoneNumber.trim())) {
-      errors.phoneNumber = "Invalid phone number format. Must be: 07XXXXXXXX (10 digits starting with 07)";
-    }
-
-    setFormErrors(errors);
-    return Object.keys(errors).length === 0;
-  };
-
-  const handleSave = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
-    setSuccess(false);
-
-    if (!validate()) {
+    if (!/^0(7[0-9]{8})$/.test(formData.phoneNumber.trim())) {
+      setError("Invalid phone number format. Must be: 07XXXXXXXX (10 digits)");
       return;
     }
 
     try {
       setSaving(true);
-      const updatedProfile = await updateCustomerProfile({
+      setError(null);
+      const updated = await updateEmployee(profile.id, {
         firstName: formData.firstName.trim(),
         lastName: formData.lastName.trim(),
         phoneNumber: formData.phoneNumber.trim(),
+        isActive: formData.isActive,
       });
-      setProfile(updatedProfile);
-      setSuccess(true);
-      setIsEditing(false);
       
-      // Update AuthContext user if available
-      if (auth.setUser) {
-        auth.setUser(updatedProfile);
-      }
-
-      // Clear success message after 3 seconds
-      setTimeout(() => setSuccess(false), 3000);
+      // Update profile state
+      setProfile({
+        ...profile,
+        firstName: updated.firstName,
+        lastName: updated.lastName,
+        phoneNumber: updated.phoneNumber,
+        isActive: updated.isActive,
+      });
+      
+      setIsEditing(false);
     } catch (err: any) {
       const errorMsg =
         err?.response?.data?.message ||
@@ -122,21 +120,6 @@ const Profile: React.FC = () => {
       setSaving(false);
     }
   };
-
-  const handleCancel = () => {
-    setIsEditing(false);
-    setError(null);
-    setFormErrors({});
-    // Reset form data to original profile values
-    if (profile) {
-      setFormData({
-        firstName: profile.firstName || "",
-        lastName: profile.lastName || "",
-        phoneNumber: profile.phoneNumber || "",
-      });
-    }
-  };
-
 
   // Format date
   const formatDate = (dateString?: string) => {
@@ -151,12 +134,12 @@ const Profile: React.FC = () => {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <Loader2 className="w-8 h-8 animate-spin text-green-600" />
+        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
       </div>
     );
   }
 
-  if (!profile) {
+  if (!profile || !formData) {
     return (
       <div className="space-y-6">
         <div>
@@ -184,21 +167,13 @@ const Profile: React.FC = () => {
         {!isEditing && (
           <button
             onClick={() => setIsEditing(true)}
-            className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors"
+            className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
           >
             <User className="w-4 h-4" />
             Edit Profile
           </button>
         )}
       </div>
-
-      {/* Success Message */}
-      {success && (
-        <div className="bg-green-50 border border-green-200 rounded-lg p-4 flex items-center gap-2 text-green-800">
-          <CheckCircle2 className="w-5 h-5 flex-shrink-0" />
-          <p>Profile updated successfully!</p>
-        </div>
-      )}
 
       {/* Error Message */}
       {error && (
@@ -228,19 +203,24 @@ const Profile: React.FC = () => {
               {profile.email}
             </p>
             <div className="flex items-center justify-center gap-2 mt-3">
-              <span className="px-3 py-1 bg-green-100 text-green-800 text-sm font-semibold rounded">
+              <span className="px-3 py-1 bg-red-100 text-red-800 text-sm font-semibold rounded">
                 {profile.role}
               </span>
-              {profile.isActive !== false && (
-                <span className="px-3 py-1 bg-blue-100 text-blue-800 text-sm font-semibold rounded">
+              {formData.isActive && (
+                <span className="px-3 py-1 bg-green-100 text-green-800 text-sm font-semibold rounded">
                   Active
+                </span>
+              )}
+              {!formData.isActive && (
+                <span className="px-3 py-1 bg-gray-100 text-gray-800 text-sm font-semibold rounded">
+                  Inactive
                 </span>
               )}
             </div>
           </div>
         </div>
 
-        {/* Personal Information Form */}
+        {/* Personal Information */}
         <div className="space-y-6">
           <div>
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Personal Information</h3>
@@ -251,25 +231,15 @@ const Profile: React.FC = () => {
                     First Name <span className="text-red-500">*</span>
                   </label>
                   {isEditing ? (
-                    <>
-                      <input
-                        type="text"
-                        value={formData.firstName}
-                        onChange={(e) => {
-                          setFormData({ ...formData, firstName: e.target.value });
-                          setFormErrors({ ...formErrors, firstName: undefined });
-                        }}
-                        className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 ${
-                          formErrors.firstName
-                            ? "border-red-300 focus:ring-red-500"
-                            : "border-gray-300 focus:ring-green-500"
-                        }`}
-                        required
-                      />
-                      {formErrors.firstName && (
-                        <p className="mt-1 text-xs text-red-600">{formErrors.firstName}</p>
-                      )}
-                    </>
+                    <input
+                      type="text"
+                      value={formData.firstName}
+                      onChange={(e) =>
+                        setFormData({ ...formData, firstName: e.target.value })
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      required
+                    />
                   ) : (
                     <div className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-gray-50 text-gray-900">
                       {profile.firstName || "N/A"}
@@ -281,25 +251,15 @@ const Profile: React.FC = () => {
                     Last Name <span className="text-red-500">*</span>
                   </label>
                   {isEditing ? (
-                    <>
-                      <input
-                        type="text"
-                        value={formData.lastName}
-                        onChange={(e) => {
-                          setFormData({ ...formData, lastName: e.target.value });
-                          setFormErrors({ ...formErrors, lastName: undefined });
-                        }}
-                        className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 ${
-                          formErrors.lastName
-                            ? "border-red-300 focus:ring-red-500"
-                            : "border-gray-300 focus:ring-green-500"
-                        }`}
-                        required
-                      />
-                      {formErrors.lastName && (
-                        <p className="mt-1 text-xs text-red-600">{formErrors.lastName}</p>
-                      )}
-                    </>
+                    <input
+                      type="text"
+                      value={formData.lastName}
+                      onChange={(e) =>
+                        setFormData({ ...formData, lastName: e.target.value })
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      required
+                    />
                   ) : (
                     <div className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-gray-50 text-gray-900">
                       {profile.lastName || "N/A"}
@@ -308,9 +268,7 @@ const Profile: React.FC = () => {
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Email
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
                 <div className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-gray-50 text-gray-500 flex items-center gap-2 cursor-not-allowed">
                   <Mail className="w-4 h-4 text-gray-400" />
                   {profile.email}
@@ -326,22 +284,14 @@ const Profile: React.FC = () => {
                     <input
                       type="tel"
                       value={formData.phoneNumber}
-                      onChange={(e) => {
-                        setFormData({ ...formData, phoneNumber: e.target.value });
-                        setFormErrors({ ...formErrors, phoneNumber: undefined });
-                      }}
-                      className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 ${
-                        formErrors.phoneNumber
-                          ? "border-red-300 focus:ring-red-500"
-                          : "border-gray-300 focus:ring-green-500"
-                      }`}
+                      onChange={(e) =>
+                        setFormData({ ...formData, phoneNumber: e.target.value })
+                      }
                       placeholder="07XXXXXXXX"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                       required
                     />
-                    {formErrors.phoneNumber && (
-                      <p className="mt-1 text-xs text-red-600">{formErrors.phoneNumber}</p>
-                    )}
-                    <p className="mt-1 text-xs text-gray-500">Format: 07XXXXXXXX (10 digits starting with 07)</p>
+                    <p className="mt-1 text-xs text-gray-500">Format: 07XXXXXXXX (10 digits)</p>
                   </>
                 ) : (
                   <div className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-gray-50 text-gray-900 flex items-center gap-2">
@@ -372,6 +322,24 @@ const Profile: React.FC = () => {
                 </div>
               </div>
             </div>
+            {isEditing && (
+              <div className="mt-4">
+                <label className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={formData.isActive}
+                    onChange={(e) =>
+                      setFormData({ ...formData, isActive: e.target.checked })
+                    }
+                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                  />
+                  <span className="text-sm font-medium text-gray-700">Active Account</span>
+                </label>
+                <p className="mt-1 text-xs text-gray-500">
+                  Inactive accounts cannot log in to the system
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Security Section */}
@@ -380,7 +348,7 @@ const Profile: React.FC = () => {
             <button
               type="button"
               onClick={() => navigate("/change-password")}
-              className="flex items-center gap-2 text-green-600 hover:text-green-700 font-medium"
+              className="flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium"
             >
               <Lock className="w-4 h-4" />
               Change Password
@@ -392,7 +360,19 @@ const Profile: React.FC = () => {
             <div className="pt-6 border-t flex justify-end gap-2">
               <button
                 type="button"
-                onClick={handleCancel}
+                onClick={() => {
+                  setIsEditing(false);
+                  setError(null);
+                  // Reset form data
+                  if (profile) {
+                    setFormData({
+                      firstName: profile.firstName,
+                      lastName: profile.lastName,
+                      phoneNumber: profile.phoneNumber || "",
+                      isActive: profile.isActive !== false,
+                    });
+                  }
+                }}
                 className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-2"
                 disabled={saving}
               >
@@ -403,7 +383,7 @@ const Profile: React.FC = () => {
                 type="button"
                 onClick={handleSave}
                 disabled={saving}
-                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               >
                 {saving ? (
                   <>
@@ -425,4 +405,5 @@ const Profile: React.FC = () => {
   );
 };
 
-export default Profile;
+export default AdminProfile;
+
