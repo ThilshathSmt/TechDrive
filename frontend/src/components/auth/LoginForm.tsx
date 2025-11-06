@@ -52,12 +52,19 @@ const LoginForm: React.FC<Props> = ({ fullPage = true }) => {
 
     try {
       setLoading(true);
-      const res = await login({ email, password }); // expected: { token, role }
-      saveAuth(res.token, res.role);
-      goByRole(res.role as Role);
+      const res = await login({ email, password }); // expected: { token, role, isFirstLogin }
+      saveAuth(res.token, res.role, res.isFirstLogin);
+      
+      // If first login, redirect to change password page
+      if (res.isFirstLogin) {
+        navigate("/change-password");
+      } else {
+        goByRole(res.role as Role);
+      }
     } catch (err: any) {
       const msg =
         err?.response?.data?.message ||
+        err?.response?.data ||
         err?.message ||
         "Invalid credentials. Please try again.";
       setFormError(msg);
@@ -149,11 +156,19 @@ const LoginForm: React.FC<Props> = ({ fullPage = true }) => {
           </button>
         </form>
 
-        <div className="mt-4 text-sm text-slate-400">
-          Don’t have an account?{' '}
-          <Link to="/register" className="text-cyan-300 hover:text-cyan-200 underline-offset-4 hover:underline">
-            Register
-          </Link>
+        <div className="mt-4 flex flex-col gap-2 text-sm text-slate-400">
+          <div>
+            Don't have an account?{' '}
+            <Link to="/register" className="text-cyan-300 hover:text-cyan-200 underline-offset-4 hover:underline">
+              Register
+            </Link>
+          </div>
+          <div>
+            Forgot your password?{' '}
+            <Link to="/forgot-password" className="text-cyan-300 hover:text-cyan-200 underline-offset-4 hover:underline">
+              Reset Password
+            </Link>
+          </div>
         </div>
       </div>
     </div>

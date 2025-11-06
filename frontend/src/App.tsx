@@ -7,6 +7,10 @@ import ProtectedRoute from "./pages/ProtectedRoute";
 import { AdminLayout, CustomerLayout, EmployeeLayout } from "./components/layouts";
 import Login from "./components/auth/LoginForm";
 import Register from "./components/auth/RegisterForm";
+import ForgotPassword from "./components/auth/ForgotPassword";
+import VerifyOtp from "./components/auth/VerifyOtp";
+import ResetPassword from "./components/auth/ResetPassword";
+import ChangePassword from "./components/auth/ChangePassword";
 
 // Admin Pages
 import AdminDashboard from "./pages/Admin/AdminDashboard";
@@ -62,9 +66,13 @@ const App: React.FC = () => {
         <ConditionalNavbar />
         <Routes>
           <Route path="/" element={<Home />} />
-          {/* public login route */}
+          {/* public auth routes */}
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/verify-otp" element={<VerifyOtp />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
+          <Route path="/change-password" element={<ChangePassword />} />
           {/* Admin Routes with Layout */}
           <Route
             path="/admin-dashboard"
