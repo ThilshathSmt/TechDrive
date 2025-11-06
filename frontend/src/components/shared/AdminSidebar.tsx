@@ -46,6 +46,11 @@ const AdminSidebar: React.FC = () => {
       path: "/admin-dashboard/services",
     },
     {
+      title: "Projects",
+      icon: Wrench,
+      path: "/admin-dashboard/projects",
+    },
+    {
       title: "Reports",
       icon: BarChart3,
       path: "/admin-dashboard/reports",

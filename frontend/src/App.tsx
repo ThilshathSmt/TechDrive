@@ -16,6 +16,7 @@ import VehiclesManagement from "./pages/Admin/VehiclesManagement";
 import ServicesManagement from "./pages/Admin/ServicesManagement";
 import Reports from "./pages/Admin/Reports";
 import Settings from "./pages/Admin/Settings";
+import ProjectsManagement from "./pages/Admin/ProjectsManagement";
 
 // Customer Pages
 import CustomerDashboard from "./pages/Customer/CustomerDashboard";
@@ -78,6 +79,7 @@ const App: React.FC = () => {
             <Route path="appointments" element={<AppointmentsManagement />} />
             <Route path="vehicles" element={<VehiclesManagement />} />
             <Route path="services" element={<ServicesManagement />} />
+            <Route path="/admin-dashboard/projects" element={<ProjectsManagement />} />
             <Route path="reports" element={<Reports />} />
             <Route path="settings" element={<Settings />} />
           </Route>
