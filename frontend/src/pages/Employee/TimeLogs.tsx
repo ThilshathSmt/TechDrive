@@ -32,6 +32,8 @@ const TimeLogs: React.FC = () => {
   const [showModal, setShowModal] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [selectedLog, setSelectedLog] = useState<TimeLog | null>(null);
+  const [projects, setProjects] = useState<any[]>([]);
+  const [appointments, setAppointments] = useState<any[]>([]);
   const [formData, setFormData] = useState<TimeLogFormData>({
     workDate: new Date().toISOString().split("T")[0],
     startTime: "09:00",
@@ -45,6 +47,8 @@ const TimeLogs: React.FC = () => {
 
   useEffect(() => {
     fetchTimeLogs();
+    fetchProjects();
+    fetchAppointments();
   }, []);
 
   const fetchTimeLogs = async () => {
@@ -63,6 +67,36 @@ const TimeLogs: React.FC = () => {
       alert("Failed to fetch time logs");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchProjects = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await axios.get(
+        "http://localhost:8080/api/employee/projects",
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      setProjects(response.data);
+    } catch (error) {
+      console.error("Error fetching projects:", error);
+    }
+  };
+
+  const fetchAppointments = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await axios.get(
+        "http://localhost:8080/api/employee/appointments",
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      setAppointments(response.data);
+    } catch (error) {
+      console.error("Error fetching appointments:", error);
     }
   };
 
@@ -498,48 +532,60 @@ const TimeLogs: React.FC = () => {
                 </div>
               </div>
 
-              {/* Project ID */}
+              {/* Project Selection */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Project ID (Optional)
+                  Project (Active Projects)
                 </label>
-                <input
-                  type="number"
+                <select
                   name="projectId"
                   value={formData.projectId}
                   onChange={handleChange}
-                  placeholder="Enter Project ID"
                   className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 ${
                     errors.projectId ? "border-red-500" : "border-gray-300"
                   }`}
                   disabled={!!formData.appointmentId}
-                />
+                >
+                  <option value="">-- Select Project --</option>
+                  {projects.map((project) => (
+                    <option key={project.id} value={project.id}>
+                      {project.projectName || `Project #${project.id}`}
+                    </option>
+                  ))}
+                </select>
                 {errors.projectId && (
                   <p className="text-red-500 text-xs mt-1">{errors.projectId}</p>
                 )}
               </div>
 
-              {/* Appointment ID */}
+              {/* Appointment Selection */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Appointment ID (Optional)
+                  Appointment (My Assignments)
                 </label>
-                <input
-                  type="number"
+                <select
                   name="appointmentId"
                   value={formData.appointmentId}
                   onChange={handleChange}
-                  placeholder="Enter Appointment ID"
                   className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 ${
                     errors.appointmentId ? "border-red-500" : "border-gray-300"
                   }`}
                   disabled={!!formData.projectId}
-                />
+                >
+                  <option value="">-- Select Appointment --</option>
+                  {appointments.map((appointment) => (
+                    <option key={appointment.id} value={appointment.id}>
+                      {appointment.vehicle?.registrationNumber 
+                        ? `${appointment.vehicle.registrationNumber} - ${appointment.appointmentDate}`
+                        : `Appointment #${appointment.id}`}
+                    </option>
+                  ))}
+                </select>
                 {errors.appointmentId && (
                   <p className="text-red-500 text-xs mt-1">{errors.appointmentId}</p>
                 )}
                 <p className="text-xs text-gray-500 mt-1">
-                  * Either Project ID or Appointment ID must be provided (not both)
+                  * Either Project or Appointment must be selected (not both)
                 </p>
               </div>
 
