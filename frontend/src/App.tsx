@@ -25,7 +25,7 @@ const App: React.FC = () => {
             }
           />
 
-          {/* Employee Dashboard */}
+          {/* Employee Dashboard ..*/}
           <Route
             path="/employee-dashboard"
             element={
