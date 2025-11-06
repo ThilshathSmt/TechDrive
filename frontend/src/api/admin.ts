@@ -44,3 +44,50 @@ export interface EmployeeLite {
   role: "EMPLOYEE" | "ADMIN" | "CUSTOMER";
   phoneNumber?: string;
 }
+
+// Dashboard Stats Interfaces
+export interface DashboardStats {
+  userCount: number;
+  appointmentCount: number;
+  vehicleCount: number;
+  totalEarnings: number;
+  activeServiceCount: number;
+  confirmedAppointments: any[];
+  todayAppointments: any[];
+}
+
+// Dashboard API Calls
+export const getDashboardUserCount = async (): Promise<number> => {
+  const res = await api.get("admin/dashboard/user/count");
+  return res.data;
+};
+
+export const getDashboardAppointmentCount = async (): Promise<number> => {
+  const res = await api.get("admin/dashboard/appointment/count");
+  return res.data;
+};
+
+export const getDashboardVehicleCount = async (): Promise<number> => {
+  const res = await api.get("admin/dashboard/vehicle/count");
+  return res.data;
+};
+
+export const getDashboardTotalEarnings = async (): Promise<number> => {
+  const res = await api.get("admin/dashboard/earnings/total");
+  return res.data;
+};
+
+export const getDashboardActiveServiceCount = async (): Promise<number> => {
+  const res = await api.get("admin/dashboard/services/active/count");
+  return res.data;
+};
+
+export const getDashboardConfirmedAppointments = async (): Promise<any[]> => {
+  const res = await api.get("admin/dashboard/appointments/confirmed");
+  return Array.isArray(res.data) ? res.data : [];
+};
+
+export const getDashboardTodayAppointments = async (): Promise<any[]> => {
+  const res = await api.get("admin/dashboard/appointments/today");
+  return Array.isArray(res.data) ? res.data : [];
+};
