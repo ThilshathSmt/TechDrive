@@ -15,12 +15,12 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("api/admin/service")
+@RequestMapping("/api/admin/services")
 public class AdminServiceController {
 
     private final TaskService taskService;
 
-    @PostMapping("/add")
+    @PostMapping
     public ResponseEntity<?> addService(Authentication authentication, @Valid @RequestBody ServiceDTO serviceDTO){
         try{
             taskService.newServiceAdd(serviceDTO);

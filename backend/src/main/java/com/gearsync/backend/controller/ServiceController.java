@@ -12,7 +12,7 @@ import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("api/service/view")
+@RequestMapping("/api/service/view")
 public class ServiceController {
 
     private final TaskService taskService;

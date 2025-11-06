@@ -48,6 +48,7 @@ public class EmployeeTimeLogService {
             throw new IllegalArgumentException("End time cannot be in the future");
         }
 
+
         TimeLog timeLog = new TimeLog();
         timeLog.setEmployee(employee);
         timeLog.setStartTime(request.getStartTime());
@@ -67,6 +68,9 @@ public class EmployeeTimeLogService {
             if (appointment.getAssignedEmployee() == null ||
                     !appointment.getAssignedEmployee().getId().equals(employee.getId())) {
                 throw new UnauthorizedException("This appointment is not assigned to you");
+            }
+            if(appointment.getScheduledDateTime().isBefore(request.getStartTime())){
+                throw new IllegalArgumentException("Cannot log time for an appointment that has not yet occurred");
             }
 
             timeLog.setAppointment(appointment);
