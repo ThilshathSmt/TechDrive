@@ -102,4 +102,8 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
     List<Appointment> findAllWithDetails();
 
     List<Appointment> findByCustomerId(Long customerId);
+
+    Long countByAssignedEmployee_Email(String email);
+
+    Long countByAssignedEmployee_EmailAndStatus(String email, AppointmentStatus status);
 }
