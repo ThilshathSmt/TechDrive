@@ -10,18 +10,21 @@ import {
   X,
   Loader,
 } from "lucide-react";
-import { addAdmin, addEmployee, listEmployees } from "../../api/admin";
+import { addAdmin, addEmployee, listEmployees, getEmployeeDetails, updateEmployee, EmployeeDetailDTO, UpdateEmployeeDTO } from "../../api/admin";
 import useApi from "../../hooks/useApi";
 
 type CreateType = "EMPLOYEE" | "ADMIN";
 
-// The backend GET /api/admin/employees returns a simplified DTO:
-// { name: string, email: string, role: string, phoneNumber?: string }
+// The backend GET /api/admin/employees returns UserDto with id
 type UserRow = {
+  id?: number;
   name?: string;
+  firstName?: string;
+  lastName?: string;
   email: string;
   role?: string;
   phoneNumber?: string;
+  isActive?: boolean;
 };
 
 const CreateUserForm: React.FC<{
@@ -195,10 +198,90 @@ const UserManagement: React.FC = () => {
     }
   };
 
-  // Not implemented endpoints in your backend — keep UX honest.
-  const handleEdit = () => {
-    alert("Edit/update is not supported by the backend API.");
+  const [editingUser, setEditingUser] = useState<UserRow | null>(null);
+  const [editFormData, setEditFormData] = useState<UpdateEmployeeDTO | null>(null);
+  const [loadingEmployee, setLoadingEmployee] = useState(false);
+  const [savingEmployee, setSavingEmployee] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
+
+  // Handle edit - only for employees and admins
+  const handleEdit = async (user: UserRow) => {
+    // Only allow editing employees and admins
+    if (user.role !== "EMPLOYEE" && user.role !== "ADMIN") {
+      alert("Only employees and admins can be edited here. Customers manage their own profiles.");
+      return;
+    }
+
+    if (!user.id) {
+      alert("User ID not available. Please refresh the page.");
+      return;
+    }
+
+    try {
+      setLoadingEmployee(true);
+      setEditError(null);
+      const employeeDetails = await getEmployeeDetails(user.id);
+      setEditingUser(user);
+      setEditFormData({
+        firstName: employeeDetails.firstName,
+        lastName: employeeDetails.lastName,
+        phoneNumber: employeeDetails.phoneNumber,
+        isActive: employeeDetails.isActive,
+      });
+    } catch (err: any) {
+      const errorMsg =
+        err?.response?.data?.message ||
+        err?.response?.data ||
+        err?.message ||
+        "Failed to load employee details";
+      alert(errorMsg);
+    } finally {
+      setLoadingEmployee(false);
+    }
   };
+
+  // Handle save employee update
+  const handleSaveEmployee = async () => {
+    if (!editingUser?.id || !editFormData) return;
+
+    // Validate
+    if (!editFormData.firstName.trim() || editFormData.firstName.trim().length < 2 || editFormData.firstName.trim().length > 50) {
+      setEditError("First name must be between 2-50 characters");
+      return;
+    }
+    if (!editFormData.lastName.trim() || editFormData.lastName.trim().length < 2 || editFormData.lastName.trim().length > 50) {
+      setEditError("Last name must be between 2-50 characters");
+      return;
+    }
+    if (!/^0(7[0-9]{8})$/.test(editFormData.phoneNumber.trim())) {
+      setEditError("Invalid phone number format. Must be: 07XXXXXXXX (10 digits)");
+      return;
+    }
+
+    try {
+      setSavingEmployee(true);
+      setEditError(null);
+      await updateEmployee(editingUser.id, {
+        firstName: editFormData.firstName.trim(),
+        lastName: editFormData.lastName.trim(),
+        phoneNumber: editFormData.phoneNumber.trim(),
+        isActive: editFormData.isActive,
+      });
+      await refetch();
+      setEditingUser(null);
+      setEditFormData(null);
+    } catch (err: any) {
+      const errorMsg =
+        err?.response?.data?.message ||
+        err?.response?.data ||
+        err?.message ||
+        "Failed to update employee";
+      setEditError(errorMsg);
+    } finally {
+      setSavingEmployee(false);
+    }
+  };
+
   const deleteUser = () => {
     alert("Delete user is not supported by the backend API.");
   };
@@ -360,7 +443,7 @@ const UserManagement: React.FC = () => {
                     .toUpperCase();
 
                   return (
-                    <tr key={user.email} className="hover:bg-gray-50">
+                    <tr key={user.id || user.email} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
                           <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold">
@@ -395,9 +478,10 @@ const UserManagement: React.FC = () => {
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                         <div className="flex items-center gap-2">
                           <button
-                            onClick={handleEdit}
+                            onClick={() => handleEdit(user)}
                             className="text-blue-600 hover:text-blue-900"
                             title="Edit"
+                            disabled={user.role === "CUSTOMER"}
                           >
                             <Edit className="w-5 h-5" />
                           </button>
@@ -494,6 +578,153 @@ const UserManagement: React.FC = () => {
                 isSubmitting={isSubmitting}
                 error={formError}
               />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Employee/Admin Modal */}
+      {editingUser && editFormData && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center p-6 border-b">
+              <h2 className="text-xl font-semibold">
+                Edit {editingUser.role === "ADMIN" ? "Admin" : "Employee"} Profile
+              </h2>
+              <button
+                onClick={() => {
+                  setEditingUser(null);
+                  setEditFormData(null);
+                  setEditError(null);
+                }}
+                className="text-gray-400 hover:text-gray-500"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            <div className="p-6">
+              {loadingEmployee ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader className="w-8 h-8 animate-spin text-blue-600" />
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {editError && (
+                    <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-red-800 text-sm">
+                      {editError}
+                    </div>
+                  )}
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Email
+                    </label>
+                    <input
+                      type="email"
+                      value={editingUser.email}
+                      disabled
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-500 cursor-not-allowed"
+                    />
+                    <p className="mt-1 text-xs text-gray-500">Email cannot be changed</p>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        First Name <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={editFormData.firstName}
+                        onChange={(e) =>
+                          setEditFormData({ ...editFormData, firstName: e.target.value })
+                        }
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Last Name <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={editFormData.lastName}
+                        onChange={(e) =>
+                          setEditFormData({ ...editFormData, lastName: e.target.value })
+                        }
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Phone Number <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="tel"
+                      value={editFormData.phoneNumber}
+                      onChange={(e) =>
+                        setEditFormData({ ...editFormData, phoneNumber: e.target.value })
+                      }
+                      placeholder="07XXXXXXXX"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      required
+                    />
+                    <p className="mt-1 text-xs text-gray-500">Format: 07XXXXXXXX (10 digits)</p>
+                  </div>
+
+                  <div>
+                    <label className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={editFormData.isActive}
+                        onChange={(e) =>
+                          setEditFormData({ ...editFormData, isActive: e.target.checked })
+                        }
+                        className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                      />
+                      <span className="text-sm font-medium text-gray-700">Active Account</span>
+                    </label>
+                    <p className="mt-1 text-xs text-gray-500">
+                      Inactive accounts cannot log in to the system
+                    </p>
+                  </div>
+
+                  <div className="flex justify-end gap-2 pt-4 border-t">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditingUser(null);
+                        setEditFormData(null);
+                        setEditError(null);
+                      }}
+                      className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                      disabled={savingEmployee}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleSaveEmployee}
+                      disabled={savingEmployee}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                    >
+                      {savingEmployee ? (
+                        <>
+                          <Loader className="w-4 h-4 animate-spin" />
+                          Saving...
+                        </>
+                      ) : (
+                        "Save Changes"
+                      )}
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>

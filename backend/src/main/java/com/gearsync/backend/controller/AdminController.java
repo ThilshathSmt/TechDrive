@@ -4,6 +4,7 @@ import com.gearsync.backend.dto.*;
 import com.gearsync.backend.exception.DuplicateResourceException;
 import com.gearsync.backend.exception.ResourceNotFoundException;
 import com.gearsync.backend.exception.UnauthorizedException;
+import com.gearsync.backend.model.Role;
 import com.gearsync.backend.model.User;
 import com.gearsync.backend.repository.UserRepository;
 import com.gearsync.backend.service.AdminServices;
@@ -13,7 +14,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 
 @RestController
@@ -53,8 +56,16 @@ public class AdminController {
     @GetMapping("/employees")
     public ResponseEntity<?> getAllEmployees() {
         try {
-            List<User> users = userRepository.findAllEmployees();
-            List<UserDto> userDtos = users.stream()
+            // Get both employees and admins for User Management
+            List<User> employees = userRepository.findAllEmployees();
+            List<User> admins = userRepository.findByRole(Role.ADMIN);
+            
+            // Combine employees and admins
+            List<User> allUsers = new ArrayList<>();
+            allUsers.addAll(employees);
+            allUsers.addAll(admins);
+            
+            List<UserDto> userDtos = allUsers.stream()
                     .map(user -> {
                         UserDto dto = new UserDto();
                         dto.setId(user.getId()); 
@@ -68,7 +79,7 @@ public class AdminController {
                         dto.setCreatedAt(user.getCreatedAt());
                         return dto;
                     })
-                    .toList();
+                    .collect(Collectors.toList());
             return ResponseEntity.ok(userDtos);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());

@@ -37,12 +37,39 @@ export const listEmployees = async () => {
   return Array.isArray(res.data) ? res.data : [];
 };
 
+
 export interface EmployeeLite {
   id: number;         // NEEDS to be present from backend
   name: string;       // "First Last"
   email: string;
   role: "EMPLOYEE" | "ADMIN" | "CUSTOMER";
   phoneNumber?: string;
+}
+
+// Employee Detail DTO
+export interface EmployeeDetailDTO {
+  id: number;
+  email: string;
+  firstName: string;
+  lastName: string;
+  phoneNumber: string;
+  role: string;
+  isActive: boolean;
+  isPasswordChanged?: boolean;
+  lastLoginAt?: string;
+  createdAt?: string;
+  assignedAppointmentsCount?: number;
+  assignedProjectsCount?: number;
+  completedAppointmentsCount?: number;
+  completedProjectsCount?: number;
+}
+
+// Update Employee DTO
+export interface UpdateEmployeeDTO {
+  firstName: string;
+  lastName: string;
+  phoneNumber: string;
+  isActive: boolean;
 }
 
 // Dashboard Stats Interfaces
@@ -118,6 +145,7 @@ export const getDashboardTodayAppointments = async (): Promise<any[]> => {
   return Array.isArray(res.data) ? res.data : [];
 };
 
+// Customer Management Functions
 export const listCustomersWithVehicles = async (): Promise<AdminCustomerWithVehiclesDTO[]> => {
   const res = await api.get<AdminCustomerWithVehiclesDTO[]>("admin/customers");
   return Array.isArray(res.data) ? res.data : [];
@@ -128,5 +156,20 @@ export const getCustomerWithVehicles = async (
   customerId: number
 ): Promise<AdminCustomerWithVehiclesDTO> => {
   const res = await api.get<AdminCustomerWithVehiclesDTO>(`admin/customers/${customerId}`);
+  return res.data;
+};
+
+// Get Employee/Admin Details
+export const getEmployeeDetails = async (employeeId: number): Promise<EmployeeDetailDTO> => {
+  const res = await api.get<EmployeeDetailDTO>(`admin/employees/${employeeId}`);
+  return res.data;
+};
+
+// Update Employee/Admin Profile
+export const updateEmployee = async (
+  employeeId: number,
+  data: UpdateEmployeeDTO
+): Promise<EmployeeDetailDTO> => {
+  const res = await api.put<EmployeeDetailDTO>(`admin/employees/${employeeId}`, data);
   return res.data;
 };
