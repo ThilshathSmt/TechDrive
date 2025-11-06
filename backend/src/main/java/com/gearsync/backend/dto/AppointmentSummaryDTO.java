@@ -9,15 +9,16 @@ import java.time.LocalDateTime;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class ProjectSummaryDTO {
+public class AppointmentSummaryDTO {
     private Long id;
-    private String projectName;
+    private LocalDateTime scheduledDateTime;
     private String status;
     private String customerName;
     private String customerEmail;
     private String vehicleRegistrationNumber;
+    private String vehicleMake;
+    private String vehicleModel;
     private String assignedEmployeeName;
-    private java.math.BigDecimal estimatedCost;
     private Integer progressPercentage;
     private LocalDateTime createdAt;
 }

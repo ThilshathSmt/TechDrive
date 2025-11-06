@@ -16,4 +16,8 @@ public interface UserRepository extends JpaRepository<User, Long> {
     default List<User> findAllEmployees() {
         return findByRole(Role.EMPLOYEE);
     }
+    List<User> findByRoleAndIsActiveTrue(Role role);
+    default List<User> findActiveEmployees() {
+        return findByRoleAndIsActiveTrue(Role.EMPLOYEE);
+    }
 }
