@@ -2,6 +2,19 @@ import React, { useContext } from "react";
 import { AuthContext } from "../../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { CheckSquare, FileText, User, LogOut } from "lucide-react";
+import { motion } from "framer-motion";
+
+/**
+ * EmployeeDashboard — GearSync (dark / glass / neon)
+ * - Matches Admin/Customer neon-glass aesthetic
+ * - Pure UI refactor; original logic intact
+ */
+
+const ACCENT_GRADIENT = "bg-gradient-to-r from-cyan-400 via-sky-400 to-indigo-400";
+const CARD =
+  "rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl shadow-[0_10px_40px_-12px_rgba(0,0,0,0.6)]";
+const BTN =
+  "inline-flex items-center gap-2 rounded-xl px-4 py-2 ring-1 ring-white/10 bg-white/5 hover:bg-white/10 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70";
 
 const EmployeeDashboard: React.FC = () => {
   const { logout, role } = useContext(AuthContext)!;
@@ -13,56 +26,103 @@ const EmployeeDashboard: React.FC = () => {
   };
 
   const stats = [
-    { title: "Assigned Tasks", value: 12, color: "from-purple-400 to-indigo-500", icon: <CheckSquare className="w-6 h-6" /> },
-    { title: "Completed Tasks", value: 8, color: "from-green-400 to-teal-500", icon: <CheckSquare className="w-6 h-6" /> },
-    { title: "Pending Reviews", value: 3, color: "from-yellow-400 to-orange-400", icon: <FileText className="w-6 h-6" /> },
+    { title: "Assigned Tasks", value: 12, icon: CheckSquare, tone: "text-cyan-300" },
+    { title: "Completed Tasks", value: 8, icon: CheckSquare, tone: "text-emerald-300" },
+    { title: "Pending Reviews", value: 3, icon: FileText, tone: "text-amber-300" },
   ];
 
   return (
-    <div className="flex h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-indigo-900 relative overflow-hidden">
-
-      {/* Animated Background */}
-      <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute -top-40 -right-40 w-80 h-80 bg-purple-500 rounded-full opacity-20 animate-pulse"></div>
-        <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-indigo-500 rounded-full opacity-15 animate-pulse" style={{animationDelay: '2s'}}></div>
-        <div className="absolute top-1/2 left-1/4 w-64 h-64 bg-pink-500 rounded-full opacity-10 animate-pulse" style={{animationDelay: '4s'}}></div>
+    <div className="relative min-h-screen text-white">
+      {/* Backdrop */}
+      <div className="absolute inset-0 -z-10">
+        <div className="absolute inset-0 bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950" />
+        <div
+          className="pointer-events-none absolute -top-40 left-1/2 h-[60rem] w-[60rem] -translate-x-1/2 rounded-full opacity-20 blur-3xl"
+          style={{ background: "radial-gradient(closest-side, rgba(34,211,238,0.35), transparent 70%)" }}
+        />
+        <div
+          className="pointer-events-none absolute top-1/3 right-[-20%] h-[40rem] w-[40rem] rounded-full opacity-15 blur-3xl"
+          style={{ background: "radial-gradient(closest-side, rgba(99,102,241,0.35), transparent 70%)" }}
+        />
+        <div
+          className="absolute inset-0 opacity-[0.08]"
+          style={{
+            backgroundImage:
+              "linear-gradient(to right, #fff 1px, transparent 1px), linear-gradient(to bottom, #fff 1px, transparent 1px)",
+            backgroundSize: "40px 40px",
+          }}
+        />
       </div>
 
+      <main className="mx-auto max-w-6xl px-6 py-10 space-y-8">
+        {/* Header */}
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className={`p-2 rounded-xl ${ACCENT_GRADIENT} text-slate-950 ring-1 ring-white/10`}>
+              <User className="w-5 h-5" />
+            </div>
+            <div>
+              <h1 className="text-3xl font-extrabold tracking-tight">Welcome, {role}</h1>
+              <p className="text-slate-300/90 mt-1">
+                Manage your tasks, view reports, and update your profile efficiently.
+              </p>
+            </div>
+          </div>
+          <button onClick={handleLogout} className={BTN}>
+            <LogOut className="w-4 h-4" />
+            Logout
+          </button>
+        </div>
 
-      {/* Main Content */}
-      <main className="flex-1 p-8 overflow-auto relative z-10">
-        <h1 className="text-4xl font-extrabold text-white mb-2">Welcome, {role}</h1>
-        <p className="text-gray-300 mb-6">Manage your tasks, view reports, and update your profile efficiently.</p>
-
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {stats.map((stat, idx) => (
-            <div
-              key={idx}
-              className={`relative overflow-hidden rounded-3xl p-6 shadow-2xl border border-white/10 bg-gradient-to-r ${stat.color} text-white hover:scale-[1.03] transform transition-all duration-300`}
+        {/* Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+          {stats.map(({ title, value, icon: Icon, tone }) => (
+            <motion.div
+              key={title}
+              className={`${CARD} p-5`}
+              whileHover={{ y: -2 }}
+              transition={{ type: "spring", stiffness: 250, damping: 20 }}
             >
-              <div className="flex items-center justify-between mb-4">
-                <span className="text-3xl font-bold">{stat.value}</span>
-                <div className="bg-white/20 p-3 rounded-full">
-                  {stat.icon}
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-slate-300/90 text-sm">{title}</p>
+                  <p className="text-3xl font-extrabold tracking-tight text-cyan-300">{value}</p>
+                </div>
+                <div className={`w-10 h-10 grid place-items-center rounded-xl ring-1 ring-white/10 bg-white/5 ${tone}`}>
+                  <Icon className="w-6 h-6" />
                 </div>
               </div>
-              <p className="text-sm font-semibold">{stat.title}</p>
-              <div className="absolute -top-6 -right-6 w-28 h-28 bg-white/10 rounded-full blur-3xl pointer-events-none"></div>
-            </div>
+            </motion.div>
           ))}
         </div>
 
-        {/* Quick Actions */}
-        <div className="mt-12 grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="bg-white/10 backdrop-blur-xl rounded-3xl p-6 border border-white/20 shadow-2xl text-white hover:shadow-white/20 transition-all duration-300">
-            <h2 className="font-bold text-xl mb-2">Task Overview</h2>
-            <p className="text-gray-300 text-sm">View your current tasks, their progress, and pending assignments.</p>
-          </div>
-          <div className="bg-white/10 backdrop-blur-xl rounded-3xl p-6 border border-white/20 shadow-2xl text-white hover:shadow-white/20 transition-all duration-300">
-            <h2 className="font-bold text-xl mb-2">Reports</h2>
-            <p className="text-gray-300 text-sm">Check detailed reports of your work and team performance.</p>
-          </div>
+        {/* Quick Sections */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <section className={`${CARD} p-6`}>
+            <div className="flex items-center gap-2 mb-2">
+              <CheckSquare className="w-5 h-5 text-cyan-300" />
+              <h2 className="text-lg font-semibold">Task Overview</h2>
+            </div>
+            <p className="text-sm text-slate-300/90">
+              View your current tasks, their progress, and pending assignments.
+            </p>
+            <div className="mt-4 border border-white/10 rounded-xl p-4 text-sm text-slate-400">
+              No recent task updates.
+            </div>
+          </section>
+
+          <section className={`${CARD} p-6`}>
+            <div className="flex items-center gap-2 mb-2">
+              <FileText className="w-5 h-5 text-emerald-300" />
+              <h2 className="text-lg font-semibold">Reports</h2>
+            </div>
+            <p className="text-sm text-slate-300/90">
+              Check detailed reports of your work and team performance.
+            </p>
+            <div className="mt-4 border border-white/10 rounded-xl p-4 text-sm text-slate-400">
+              No reports available yet.
+            </div>
+          </section>
         </div>
       </main>
     </div>

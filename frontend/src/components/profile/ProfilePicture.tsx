@@ -1,3 +1,4 @@
+// src/components/profile/ProfilePicture.tsx
 import React, { useState, useRef, useEffect } from "react";
 import { Camera, X, Loader2, AlertCircle } from "lucide-react";
 import {
@@ -18,6 +19,20 @@ interface ProfilePictureProps {
   onPictureChange?: (imageData: string | null) => void;
 }
 
+/** Aesthetic tokens to match the neon/glass UI */
+const ACCENT_GRADIENT = "bg-gradient-to-br from-cyan-400 via-sky-400 to-indigo-400";
+const RING = "ring-1 ring-white/15";
+const MENU_CARD =
+  "rounded-2xl border border-white/10 bg-slate-900/80 backdrop-blur-xl shadow-[0_10px_40px_-12px_rgba(0,0,0,0.6)]";
+
+const sizeClasses: Record<NonNullable<ProfilePictureProps["size"]>, string> = {
+  sm: "w-16 h-16 text-lg",
+  md: "w-20 h-20 text-2xl",
+  lg: "w-32 h-32 text-4xl",
+  xl: "w-40 h-40 text-5xl",
+  "2xl": "w-48 h-48 text-6xl",
+};
+
 const ProfilePicture: React.FC<ProfilePictureProps> = ({
   userId,
   firstName,
@@ -30,35 +45,46 @@ const ProfilePicture: React.FC<ProfilePictureProps> = ({
   const [imageSrc, setImageSrc] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [showUpload, setShowUpload] = useState(false);
+  const [openMenu, setOpenMenu] = useState(false);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
-  // Size classes
-  const sizeClasses = {
-    sm: "w-16 h-16 text-lg",
-    md: "w-20 h-20 text-2xl",
-    lg: "w-32 h-32 text-4xl",
-    xl: "w-40 h-40 text-5xl",
-    "2xl": "w-48 h-48 text-6xl",
-  };
-
-  // Load profile picture on mount
+  // Load saved picture on mount
   useEffect(() => {
-    const savedImage = getProfilePicture(userId);
-    if (savedImage) {
-      setImageSrc(savedImage);
-      onPictureChange?.(savedImage);
+    const saved = getProfilePicture(userId);
+    if (saved) {
+      setImageSrc(saved);
+      onPictureChange?.(saved);
     }
   }, [userId, onPictureChange]);
 
-  // Generate initials
-  const getInitials = () => {
-    const first = firstName?.charAt(0) || "";
-    const last = lastName?.charAt(0) || "";
-    return (first + last).toUpperCase() || email?.charAt(0).toUpperCase() || "U";
+  // Close menu on outside click
+  useEffect(() => {
+    const onDocClick = (e: MouseEvent) => {
+      if (!openMenu) return;
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setOpenMenu(false);
+      }
+    };
+    document.addEventListener("mousedown", onDocClick);
+    return () => document.removeEventListener("mousedown", onDocClick);
+  }, [openMenu]);
+
+  const initials = () => {
+    const f = firstName?.trim()?.charAt(0) || "";
+    const l = lastName?.trim()?.charAt(0) || "";
+    const base = (f + l) || email?.charAt(0) || "U";
+    return base.toUpperCase();
   };
 
-  // Handle file selection
+  const handleClick = () => {
+    if (!editable || loading) return;
+    // If no image yet, go straight to picker
+    if (!imageSrc) fileInputRef.current?.click();
+    else setOpenMenu((s) => !s);
+  };
+
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -66,114 +92,87 @@ const ProfilePicture: React.FC<ProfilePictureProps> = ({
     setError(null);
     setLoading(true);
 
-    // Validate file
     const validation = validateImageFile(file);
     if (!validation.valid) {
-      setError(validation.error || "Invalid file");
+      setError(validation.error || "Invalid file.");
       setLoading(false);
+      // reset input
+      if (fileInputRef.current) fileInputRef.current.value = "";
       return;
     }
 
     try {
-      // Convert to base64
       const base64 = await fileToBase64(file);
-      
-      // Save to localStorage
       saveProfilePicture(userId, base64);
-      
-      // Update state
       setImageSrc(base64);
       onPictureChange?.(base64);
-      setShowUpload(false);
-    } catch (err: any) {
+      setOpenMenu(false);
+    } catch (err) {
+      console.error(err);
       setError("Failed to process image. Please try again.");
-      console.error("Error processing image:", err);
     } finally {
       setLoading(false);
-      // Reset file input
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
-      }
+      if (fileInputRef.current) fileInputRef.current.value = "";
     }
   };
 
-  // Handle remove picture
-  const handleRemovePicture = () => {
+  const handleRemove = () => {
     removeProfilePicture(userId);
     setImageSrc(null);
     onPictureChange?.(null);
-    setShowUpload(false);
+    setOpenMenu(false);
   };
-
-  // Handle click to upload
-  const handleClick = () => {
-    if (editable && !loading) {
-      // If no picture exists, directly trigger file input
-      // If picture exists, show menu
-      if (!imageSrc) {
-        fileInputRef.current?.click();
-      } else {
-        setShowUpload(!showUpload);
-      }
-    }
-  };
-
-  // Close menu when clicking outside
-  const containerRef = useRef<HTMLDivElement>(null);
-  
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (showUpload && containerRef.current && !containerRef.current.contains(event.target as Node)) {
-        setShowUpload(false);
-      }
-    };
-
-    if (showUpload) {
-      document.addEventListener('mousedown', handleClickOutside);
-      return () => document.removeEventListener('mousedown', handleClickOutside);
-    }
-  }, [showUpload]);
 
   return (
     <div ref={containerRef} className="relative inline-block">
-      {/* Profile Picture */}
-      <div
-        className={`relative ${sizeClasses[size]} rounded-full overflow-hidden ${
-          editable ? "cursor-pointer group" : ""
-        }`}
+      {/* Avatar */}
+      <button
+        type="button"
         onClick={handleClick}
+        aria-label={editable ? "Change profile photo" : "Profile photo"}
+        className={[
+          "relative rounded-full overflow-hidden group focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70",
+          sizeClasses[size],
+          editable ? "cursor-pointer" : "cursor-default",
+          RING,
+        ].join(" ")}
       >
         {imageSrc ? (
           <img
             src={imageSrc}
             alt="Profile"
-            className="w-full h-full object-cover"
+            className="w-full h-full object-cover transition-transform duration-300 group-active:scale-[0.98]"
           />
         ) : (
-          <div className="w-full h-full bg-gradient-to-br from-cyan-400 via-sky-400 to-indigo-400 flex items-center justify-center text-white font-bold">
-            {getInitials()}
+          <div
+            className={[
+              "w-full h-full text-white font-bold grid place-items-center select-none",
+              ACCENT_GRADIENT,
+            ].join(" ")}
+          >
+            {initials()}
           </div>
         )}
 
-        {/* Overlay on hover (editable) */}
-        {editable && (
-          <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-            <div className="text-center">
-              <Camera className="w-6 h-6 text-white mx-auto mb-1" />
-              <span className="text-xs text-white font-medium">Change Photo</span>
+        {/* Hover overlay (editable) */}
+        {editable && !loading && (
+          <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity grid place-items-center">
+            <div className="text-center text-white">
+              <Camera className="w-6 h-6 mx-auto mb-1" />
+              <span className="text-xs font-medium">Change Photo</span>
             </div>
           </div>
         )}
 
-        {/* Loading Overlay */}
+        {/* Loading overlay */}
         {loading && (
-          <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/60 grid place-items-center">
             <Loader2 className="w-6 h-6 text-white animate-spin" />
           </div>
         )}
-      </div>
+      </button>
 
-      {/* Hidden File Input */}
+      {/* File input (hidden) */}
       {editable && (
         <input
           ref={fileInputRef}
@@ -184,23 +183,52 @@ const ProfilePicture: React.FC<ProfilePictureProps> = ({
         />
       )}
 
-      {/* Upload Menu (if editable and clicked) */}
-      {editable && showUpload && (
-        <div className="absolute top-full left-0 mt-2 bg-white rounded-lg shadow-xl border border-gray-200 p-3 z-50 min-w-[200px]">
+      {/* Mini action button (only when image exists & editable) */}
+      {editable && imageSrc && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            setOpenMenu((s) => !s);
+          }}
+          title="Change profile picture"
+          className={[
+            "absolute -bottom-1 -right-1 w-8 h-8 rounded-full grid place-items-center",
+            "bg-white/10 text-white hover:bg-white/20 transition-colors",
+            RING,
+          ].join(" ")}
+        >
+          <Camera className="w-4 h-4" />
+        </button>
+      )}
+
+      {/* Action menu */}
+      {editable && openMenu && (
+        <div
+          className={[
+            "absolute top-full left-0 mt-2 z-50 min-w-[220px] p-3 text-slate-200",
+            MENU_CARD,
+          ].join(" ")}
+          role="menu"
+        >
           <div className="space-y-2">
             <button
               type="button"
               onClick={() => {
                 fileInputRef.current?.click();
-                setShowUpload(false);
+                setOpenMenu(false);
               }}
               disabled={loading}
-              className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded transition-colors disabled:opacity-50"
+              className={[
+                "w-full flex items-center gap-2 px-3 py-2 text-sm rounded-xl",
+                "hover:bg-white/5 transition-colors disabled:opacity-60",
+              ].join(" ")}
+              role="menuitem"
             >
               {loading ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  Uploading...
+                  Uploading…
                 </>
               ) : (
                 <>
@@ -209,49 +237,38 @@ const ProfilePicture: React.FC<ProfilePictureProps> = ({
                 </>
               )}
             </button>
+
             {imageSrc && (
               <button
                 type="button"
-                onClick={() => {
-                  handleRemovePicture();
-                  setShowUpload(false);
-                }}
-                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded transition-colors"
+                onClick={handleRemove}
+                className={[
+                  "w-full flex items-center gap-2 px-3 py-2 text-sm rounded-xl",
+                  "text-rose-300 hover:bg-rose-500/10 hover:text-rose-200 transition-colors",
+                ].join(" ")}
+                role="menuitem"
               >
                 <X className="w-4 h-4" />
                 Remove Photo
               </button>
             )}
           </div>
+
+          {/* Error */}
           {error && (
-            <div className="mt-2 flex items-start gap-2 text-xs text-red-600 bg-red-50 p-2 rounded">
-              <AlertCircle className="w-3 h-3 flex-shrink-0 mt-0.5" />
+            <div className="mt-3 flex items-start gap-2 text-xs text-rose-300 bg-rose-500/10 rounded-xl px-3 py-2">
+              <AlertCircle className="w-3 h-3 mt-0.5 flex-shrink-0" />
               <span>{error}</span>
             </div>
           )}
-          <p className="mt-2 text-xs text-gray-500">
-            Max size: 2MB. Formats: JPG, PNG, GIF, WebP
+
+          <p className="mt-2 text-[11px] text-slate-400">
+            Max size: 2MB. Formats: JPG, PNG, GIF, WebP.
           </p>
         </div>
-      )}
-
-      {/* Edit Icon Badge (editable) - shows when picture exists */}
-      {editable && imageSrc && (
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            setShowUpload(!showUpload);
-          }}
-          className="absolute -bottom-1 -right-1 w-8 h-8 bg-green-600 text-white rounded-full flex items-center justify-center shadow-lg hover:bg-green-700 transition-colors z-10"
-          title="Change profile picture"
-        >
-          <Camera className="w-4 h-4" />
-        </button>
       )}
     </div>
   );
 };
 
 export default ProfilePicture;
-

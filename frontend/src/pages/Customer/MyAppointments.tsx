@@ -13,7 +13,16 @@ import useApi from "../../hooks/useApi";
 import { listAllServices } from "../../api/services";
 import { listMyVehicles } from "../../api/vehicles";
 
-// ---- Local types just for form state ----
+/* ---- Theme tokens (match Admin/UserManagement) ---- */
+const ACCENT_GRADIENT = "bg-gradient-to-r from-cyan-400 via-sky-400 to-indigo-400";
+const CARD =
+  "rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl shadow-[0_10px_40px_-12px_rgba(0,0,0,0.6)]";
+const BTN_BASE =
+  "inline-flex items-center gap-2 rounded-xl px-4 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70 focus-visible:ring-offset-0 ring-1 ring-white/10";
+const INPUT =
+  "mt-1 w-full rounded-xl bg-white/5 text-white placeholder:text-slate-400 px-3 py-2.5 ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-cyan-300/70";
+
+/* ---- Local types just for form state ---- */
 type FormState = {
   vehicleId?: number;
   serviceIds: number[];
@@ -189,89 +198,123 @@ const MyAppointments: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="relative text-white">
+      {/* Backdrop (dark/neon grid) */}
+      <div className="absolute inset-0 -z-10">
+        <div className="absolute inset-0 bg-gradient-to-b from-slate-950/80 via-slate-900/80 to-slate-950/80" />
+        <div
+          className="pointer-events-none absolute -top-40 left-1/2 h-[50rem] w-[50rem] -translate-x-1/2 rounded-full opacity-20 blur-3xl"
+          style={{ background: "radial-gradient(closest-side, rgba(34,211,238,0.35), transparent 70%)" }}
+        />
+        <div
+          className="pointer-events-none absolute top-1/3 right-[-20%] h-[40rem] w-[40rem] rounded-full opacity-15 blur-3xl"
+          style={{ background: "radial-gradient(closest-side, rgba(99,102,241,0.35), transparent 70%)" }}
+        />
+        <div
+          className="absolute inset-0 opacity-[0.07]"
+          style={{
+            backgroundImage:
+              "linear-gradient(to right, #fff 1px, transparent 1px), linear-gradient(to bottom, #fff 1px, transparent 1px)",
+            backgroundSize: "40px 40px",
+          }}
+        />
+      </div>
+
+      {/* Header */}
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">My Appointments</h1>
-          <p className="text-gray-600 mt-1">View and manage your service appointments</p>
+        <div className="flex items-center gap-3">
+          <div className={`p-2 rounded-xl ${ACCENT_GRADIENT} text-slate-950 ring-1 ring-white/10`}>
+            <Calendar className="w-5 h-5" />
+          </div>
         </div>
         <button
           onClick={openBook}
-          className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors"
+          className={`${BTN_BASE} ${ACCENT_GRADIENT} text-slate-950 hover:brightness-110`}
         >
           <Plus className="w-5 h-5" />
           Book Appointment
         </button>
       </div>
+      <h1 className="mt-2 text-2xl md:text-3xl font-bold tracking-tight">My Appointments</h1>
+      <p className="text-slate-300/90 text-sm">View and manage your service appointments</p>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white rounded-lg shadow p-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mt-6">
+        <div className={`${CARD} p-5`}>
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-gray-600 text-sm">Total Appointments</p>
-              <p className="text-2xl font-bold text-gray-900">{appointments?.length ?? 0}</p>
+              <p className="text-slate-300/90 text-sm">Total Appointments</p>
+              <p className="text-3xl font-extrabold tracking-tight text-cyan-300">
+                {appointments?.length ?? 0}
+              </p>
             </div>
-            <Calendar className="w-10 h-10 text-green-500" />
+            <div className="w-10 h-10 grid place-items-center rounded-xl bg-white/5 ring-1 ring-emerald-300 text-emerald-300">
+              <Calendar className="w-6 h-6" />
+            </div>
           </div>
         </div>
-        {/* ...other stats... */}
+        {/* add more stat cards here if needed */}
       </div>
 
       {/* Appointments List */}
-      <div className="bg-white rounded-lg shadow overflow-hidden">
+      <div className={`${CARD} mt-6 overflow-hidden`}>
         {loading ? (
           <div className="p-12 text-center">
-            <div className="inline-block w-8 h-8 border-4 border-green-600 border-t-transparent rounded-full animate-spin"></div>
-            <p className="mt-4 text-gray-600">Loading appointments...</p>
+            <div className="inline-block w-8 h-8 border-4 border-cyan-300 border-t-transparent rounded-full animate-spin" />
+            <p className="mt-4 text-slate-300/90">Loading appointments...</p>
           </div>
         ) : error ? (
-          <div className="p-12 text-center text-red-600">Error loading appointments</div>
+          <div className="p-12 text-center text-rose-300">Error loading appointments</div>
         ) : !appointments || appointments.length === 0 ? (
           <div className="p-12 text-center">
-            <Calendar className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-            <p className="text-gray-600">No appointments yet</p>
+            <div className={`w-16 h-16 ${ACCENT_GRADIENT} text-slate-950 mx-auto mb-4 rounded-xl grid place-items-center ring-1 ring-white/10`}>
+              <Calendar className="w-7 h-7" />
+            </div>
+            <p className="text-slate-300/90">No appointments yet</p>
             <button
               onClick={openBook}
-              className="mt-4 text-green-600 hover:text-green-700 font-medium"
+              className={`${BTN_BASE} mt-4 ${ACCENT_GRADIENT} text-slate-950 hover:brightness-110`}
             >
               Book your first appointment
             </button>
           </div>
         ) : (
-          <div className="p-6">
+          <div className="p-6 overflow-x-auto">
             <ul className="space-y-4">
               {appointments.map((a) => (
-                <li key={a.id} className="border rounded-lg p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-semibold">
+                <li key={a.id} className="rounded-xl ring-1 ring-white/10 bg-white/5 p-4">
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="min-w-0">
+                      <p className="font-semibold text-white truncate">
                         {a.services?.map((s) => s.serviceName).join(", ") || "Services"}
                       </p>
-                      <p className="text-sm text-gray-600">
+                      <p className="text-sm text-slate-300/90">
                         {a.scheduledDateTime
                           ? new Date(a.scheduledDateTime).toLocaleString()
                           : "—"}
                       </p>
                     </div>
-                    <div className="text-sm text-gray-500">{a.status}</div>
+                    <span className="shrink-0 px-2 py-1 rounded-full text-xs bg-white/10 ring-1 ring-white/10 text-slate-200">
+                      {a.status}
+                    </span>
                   </div>
-                  <div className="mt-2 flex gap-2">
+
+                  <div className="mt-3 flex flex-wrap gap-2">
                     <button
                       onClick={() => openEdit(a)}
-                      className="text-blue-600 hover:underline text-sm"
+                      className={`${BTN_BASE} bg-white/5 hover:bg-white/10 text-sm`}
                     >
                       Edit
                     </button>
                     <button
                       onClick={() => handleCancel(a.id)}
-                      className="text-orange-600 hover:underline text-sm"
+                      className={`${BTN_BASE} bg-white/5 hover:bg-white/10 text-sm`}
                     >
                       Cancel
                     </button>
                     <button
                       onClick={() => handleDelete(a.id)}
-                      className="text-red-600 hover:underline text-sm"
+                      className={`${BTN_BASE} bg-white/5 hover:bg-white/10 text-sm`}
                     >
                       Delete
                     </button>
@@ -286,29 +329,31 @@ const MyAppointments: React.FC = () => {
       {/* Modal for Book/Edit Appointment */}
       {showModal && (
         <div
-          className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50"
+          className="fixed inset-0 z-50 grid place-items-center"
           role="dialog"
           aria-modal="true"
         >
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
-            <h2 className="text-xl font-bold mb-4">
+          <div className="absolute inset-0 bg-black/60" onClick={closeModal} />
+          <div className={`${CARD} relative w-full max-w-md mx-4 p-6`}>
+            <h2 className="text-xl font-semibold">
               {editApp ? "Edit Appointment" : "Book Appointment"}
             </h2>
-            <form onSubmit={handleSubmit} className="space-y-4">
+
+            <form onSubmit={handleSubmit} className="space-y-4 mt-4">
               {/* Vehicle */}
               <div>
-                <label className="block text-sm font-medium text-gray-700">Vehicle</label>
+                <label className="block text-sm font-medium text-slate-200">Vehicle</label>
                 <select
                   value={form.vehicleId ?? ""}
                   onChange={(e) =>
                     setForm((f) => ({ ...f, vehicleId: Number(e.target.value) || undefined }))
                   }
                   required
-                  className="mt-1 block w-full border rounded-md px-2 py-1"
+                  className={`${INPUT} appearance-none`}
                 >
-                  <option value="">Select vehicle</option>
+                  <option className="bg-slate-900" value="">Select vehicle</option>
                   {myVehicles.map((v: any) => (
-                    <option key={v.id} value={v.id}>
+                    <option className="bg-slate-900" key={v.id} value={v.id}>
                       {v.make} {v.model} ({v.registrationNumber})
                     </option>
                   ))}
@@ -317,7 +362,7 @@ const MyAppointments: React.FC = () => {
 
               {/* Services (multi-select) */}
               <div>
-                <label className="block text-sm font-medium text-gray-700">Services</label>
+                <label className="block text-sm font-medium text-slate-200">Services</label>
                 <select
                   multiple
                   value={form.serviceIds.map(String)}
@@ -326,20 +371,20 @@ const MyAppointments: React.FC = () => {
                     setForm((f) => ({ ...f, serviceIds: vals }));
                   }}
                   required
-                  className="mt-1 block w-full border rounded-md px-2 py-1 min-h-28"
+                  className={`${INPUT} min-h-28`}
                 >
                   {services.map((s: any) => (
-                    <option key={s.id} value={s.id}>
+                    <option className="bg-slate-900" key={s.id} value={s.id}>
                       {s.serviceName} — {(s.basePrice ?? 0).toLocaleString()}
                     </option>
                   ))}
                 </select>
-                <p className="text-xs text-gray-500 mt-1">Hold Ctrl/Cmd to select multiple.</p>
+                <p className="text-xs text-slate-400 mt-1">Hold Ctrl/Cmd to select multiple.</p>
               </div>
 
               {/* Date & Time */}
               <div>
-                <label className="block text-sm font-medium text-gray-700">Date & Time</label>
+                <label className="block text-sm font-medium text-slate-200">Date &amp; Time</label>
                 <input
                   type="datetime-local"
                   value={form.scheduledDateTime}
@@ -347,55 +392,47 @@ const MyAppointments: React.FC = () => {
                     setForm((f) => ({ ...f, scheduledDateTime: e.target.value }))
                   }
                   required
-                  className="mt-1 block w-full border rounded-md px-2 py-1"
+                  className={INPUT}
                 />
               </div>
 
               {/* Notes */}
               <div>
-                <label className="block text-sm font-medium text-gray-700">Notes</label>
+                <label className="block text-sm font-medium text-slate-200">Notes</label>
                 <input
                   type="text"
                   value={form.customerNotes}
                   onChange={(e) =>
                     setForm((f) => ({ ...f, customerNotes: e.target.value }))
                   }
-                  className="mt-1 block w-full border rounded-md px-2 py-1"
+                  className={INPUT}
                   placeholder="Anything specific you'd like us to check?"
                 />
               </div>
 
-              {formError && <div className="text-red-600 text-sm">{formError}</div>}
+              {formError && (
+                <div className="text-sm text-rose-300 bg-rose-500/10 ring-1 ring-rose-500/20 px-3 py-2 rounded-xl">
+                  {formError}
+                </div>
+              )}
 
-              <div className="flex justify-end gap-2">
+              <div className="flex justify-end gap-2 pt-2">
                 <button
                   type="button"
                   onClick={closeModal}
-                  className="px-4 py-2 border rounded-md"
+                  className={`${BTN_BASE} bg-white/5 hover:bg-white/10`}
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-green-600 text-white rounded-md disabled:opacity-60"
+                  className={`${BTN_BASE} ${ACCENT_GRADIENT} text-slate-950 disabled:opacity-60`}
                   disabled={isSubmitting}
                 >
                   {isSubmitting ? "Saving..." : editApp ? "Update" : "Book"}
                 </button>
               </div>
             </form>
-            {/* Hidden submit payload preview for debugging (optional)
-            <pre className="text-xs mt-3 bg-gray-50 p-2 rounded">
-              {JSON.stringify(
-                {
-                  ...form,
-                  scheduledDateTime: toBackendSeconds(form.scheduledDateTime),
-                },
-                null,
-                2
-              )}
-            </pre>
-            */}
           </div>
         </div>
       )}

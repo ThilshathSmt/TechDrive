@@ -1,20 +1,38 @@
-import React, { useContext, useEffect, useState } from "react";
+import React, { useContext, useEffect, useMemo, useState } from "react";
 import { AuthContext } from "../../context/AuthContext";
 import { useNavigate } from "react-router-dom";
-import { Users, FileText, Settings, LogOut, BarChart2, Calendar, CheckCircle, Car, DollarSign, Loader2 } from "lucide-react";
-import { 
-  getDashboardUserCount, 
-  getDashboardAppointmentCount, 
+import {
+  Users,
+  Calendar,
+  Car,
+  CheckCircle,
+  DollarSign,
+  BarChart2,
+  Shield,
+  Loader2,
+} from "lucide-react";
+import {
+  getDashboardUserCount,
+  getDashboardAppointmentCount,
   getDashboardVehicleCount,
   getDashboardTotalEarnings,
   getDashboardActiveServiceCount,
   getDashboardConfirmedAppointments,
-  getDashboardTodayAppointments
+  getDashboardTodayAppointments,
 } from "../../api/admin";
+import { motion } from "framer-motion";
+
+// ---- Theme tokens (align with Home) ----
+const ACCENT_GRADIENT = "bg-gradient-to-r from-cyan-400 via-sky-400 to-indigo-400";
+const CARD =
+  "rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl shadow-[0_10px_40px_-12px_rgba(0,0,0,0.6)]";
+const BTN =
+  "inline-flex items-center gap-2 rounded-xl px-4 py-2 ring-1 ring-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70";
 
 const AdminDashboard: React.FC = () => {
-  const { logout, role } = useContext(AuthContext)!;
   const navigate = useNavigate();
+  const { user } = useContext(AuthContext);
+  const name = user?.firstName || user?.email || "Admin";
 
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
@@ -24,11 +42,11 @@ const AdminDashboard: React.FC = () => {
     totalEarnings: 0,
     activeServiceCount: 0,
     confirmedAppointmentsCount: 0,
-    todayAppointmentsCount: 0
+    todayAppointmentsCount: 0,
   });
 
   useEffect(() => {
-    const fetchDashboardData = async () => {
+    (async () => {
       try {
         setLoading(true);
         const [
@@ -38,7 +56,7 @@ const AdminDashboard: React.FC = () => {
           totalEarnings,
           activeServiceCount,
           confirmedAppointments,
-          todayAppointments
+          todayAppointments,
         ] = await Promise.all([
           getDashboardUserCount(),
           getDashboardAppointmentCount(),
@@ -46,98 +64,157 @@ const AdminDashboard: React.FC = () => {
           getDashboardTotalEarnings(),
           getDashboardActiveServiceCount(),
           getDashboardConfirmedAppointments(),
-          getDashboardTodayAppointments()
+          getDashboardTodayAppointments(),
         ]);
-
         setStats({
           userCount: Number(userCount) || 0,
           appointmentCount: Number(appointmentCount) || 0,
           vehicleCount: Number(vehicleCount) || 0,
           totalEarnings: Number(totalEarnings) || 0,
           activeServiceCount: Number(activeServiceCount) || 0,
-          confirmedAppointmentsCount: confirmedAppointments.length || 0,
-          todayAppointmentsCount: todayAppointments.length || 0
+          confirmedAppointmentsCount: (confirmedAppointments as any[])?.length || 0,
+          todayAppointmentsCount: (todayAppointments as any[])?.length || 0,
         });
-      } catch (error) {
-        console.error("Error fetching dashboard data:", error);
+      } catch (err) {
+        console.error("Error fetching dashboard data:", err);
       } finally {
         setLoading(false);
       }
-    };
-
-    fetchDashboardData();
+    })();
   }, []);
 
-  const handleLogout = () => {
-    logout();
-    navigate("/");
-  };
 
-  const dashboardStats = [
-    { title: "Total Users", value: stats.userCount, color: "from-blue-500 to-indigo-500", icon: <Users className="w-6 h-6" /> },
-    { title: "Total Appointments", value: stats.appointmentCount, color: "from-purple-500 to-pink-500", icon: <Calendar className="w-6 h-6" /> },
-    { title: "Total Vehicles", value: stats.vehicleCount, color: "from-cyan-500 to-blue-500", icon: <Car className="w-6 h-6" /> },
-    { title: "Active Services", value: stats.activeServiceCount, color: "from-green-500 to-teal-500", icon: <BarChart2 className="w-6 h-6" /> },
-    { title: "Confirmed Today", value: stats.confirmedAppointmentsCount, color: "from-yellow-400 to-orange-500", icon: <CheckCircle className="w-6 h-6" /> },
-    { title: "Total Earnings", value: `$${stats.totalEarnings.toFixed(2)}`, color: "from-emerald-500 to-green-500", icon: <DollarSign className="w-6 h-6" /> },
+  const nf = useMemo(() => new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 }), []);
+  const cf = useMemo(() => new Intl.NumberFormat(undefined, { style: "currency", currency: "USD" }), []);
+
+  const cards = [
+    { label: "Total Users", value: nf.format(stats.userCount), icon: Users },
+    { label: "Total Appointments", value: nf.format(stats.appointmentCount), icon: Calendar },
+    { label: "Total Vehicles", value: nf.format(stats.vehicleCount), icon: Car },
+    { label: "Active Services", value: nf.format(stats.activeServiceCount), icon: BarChart2 },
+    { label: "Confirmed Today", value: nf.format(stats.confirmedAppointmentsCount), icon: CheckCircle },
+    { label: "Total Earnings", value: cf.format(stats.totalEarnings), icon: DollarSign },
   ];
 
   return (
-    <div className="flex h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900 relative overflow-hidden">
-
-      {/* Animated Background */}
-      <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute -top-40 -right-40 w-80 h-80 bg-blue-500 rounded-full opacity-20 animate-pulse"></div>
-        <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-indigo-500 rounded-full opacity-15 animate-pulse" style={{animationDelay: '2s'}}></div>
-        <div className="absolute top-1/2 left-1/4 w-64 h-64 bg-purple-500 rounded-full opacity-10 animate-pulse" style={{animationDelay: '4s'}}></div>
+    <div className="relative min-h-screen text-white overflow-hidden">
+      {/* Backdrop like Home: gradient, radial glows, subtle grid */}
+      <div className="absolute inset-0 -z-10">
+        <div className="absolute inset-0 bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950" />
+        <div
+          className="pointer-events-none absolute -top-40 left-1/2 h-[60rem] w-[60rem] -translate-x-1/2 rounded-full opacity-20 blur-3xl"
+          style={{ background: "radial-gradient(closest-side, rgba(34,211,238,0.35), transparent 70%)" }}
+        />
+        <div
+          className="pointer-events-none absolute top-1/3 right-[-20%] h-[40rem] w-[40rem] rounded-full opacity-15 blur-3xl"
+          style={{ background: "radial-gradient(closest-side, rgba(99,102,241,0.35), transparent 70%)" }}
+        />
+        <div
+          className="absolute inset-0 opacity-[0.08]"
+          style={{
+            backgroundImage:
+              "linear-gradient(to right, #fff 1px, transparent 1px), linear-gradient(to bottom, #fff 1px, transparent 1px)",
+            backgroundSize: "40px 40px",
+          }}
+        />
       </div>
 
+      {/* Page container */}
+      <main className="mx-auto max-w-7xl px-6 py-10">
+        {/* Header */}
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className={`p-2 rounded-xl ${ACCENT_GRADIENT} text-slate-950 ring-1 ring-white/10`}>
+              <Shield className="w-5 h-5" />
+            </div>
+            <div>
+              <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight">Welcome, {name}</h1>
+              <p className="text-slate-300/90 text-sm">Manage users, appointments, vehicles, and revenue at a glance.</p>
+            </div>
+          </div>
+        </div>
 
-      {/* Main Content */}
-      <main className="flex-1 p-8 overflow-auto relative z-10">
-        <h1 className="text-4xl font-extrabold text-white mb-2">Welcome, {role}</h1>
-        <p className="text-gray-300 mb-6">Manage users, view reports, and configure settings with style.</p>
-
+        {/* Loading */}
         {loading ? (
-          <div className="flex items-center justify-center h-64">
-            <Loader2 className="w-12 h-12 text-white animate-spin" />
+          <div className="flex items-center justify-center h-72">
+            <Loader2 className="w-10 h-10 animate-spin text-cyan-300" />
           </div>
         ) : (
           <>
-            {/* Stats Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {dashboardStats.map((stat, idx) => (
-                <div
-                  key={idx}
-                  className={`relative overflow-hidden rounded-3xl p-6 shadow-2xl border border-white/10 bg-gradient-to-r ${stat.color} text-white hover:scale-[1.03] transform transition-all duration-300`}
+            {/* Stat Cards */}
+            <section className="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+              {cards.map(({ label, value, icon: Icon }, i) => (
+                <motion.div
+                  key={label}
+                  className={`${CARD} p-6`}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.35, delay: i * 0.05 }}
+                  whileHover={{ y: -3 }}
                 >
-                  <div className="flex items-center justify-between mb-4">
-                    <span className="text-3xl font-bold">{stat.value}</span>
-                    <div className="bg-white/20 p-3 rounded-full">
-                      {stat.icon}
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="text-3xl font-extrabold tracking-tight text-cyan-300">{value}</div>
+                      <div className="mt-1 text-slate-300/90 text-sm">{label}</div>
+                    </div>
+                    <div className="p-3 rounded-xl bg-white/5 ring-1 ring-white/10">
+                      <Icon className="w-6 h-6" />
                     </div>
                   </div>
-                  <p className="text-sm font-semibold">{stat.title}</p>
-                  <div className="absolute -top-6 -right-6 w-28 h-28 bg-white/10 rounded-full blur-3xl pointer-events-none"></div>
-                </div>
+                </motion.div>
               ))}
-            </div>
+            </section>
 
-            {/* Dashboard Sections */}
-            <div className="mt-12 grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="bg-white/10 backdrop-blur-xl rounded-3xl p-6 border border-white/20 shadow-2xl text-white hover:shadow-white/20 transition-all duration-300">
-                <h2 className="font-bold text-xl mb-2">Today's Appointments</h2>
-                <p className="text-gray-300 text-sm">
-                  {stats.todayAppointmentsCount} appointment{stats.todayAppointmentsCount !== 1 ? 's' : ''} scheduled for today
+            {/* Secondary Panels */}
+            <section className="mt-10 grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className={`${CARD} p-6`}>
+                <div className="flex items-center gap-3 mb-2">
+                  <div className={`p-2 rounded-xl ${ACCENT_GRADIENT} text-slate-950 ring-1 ring-white/10`}>
+                    <Calendar className="w-5 h-5" />
+                  </div>
+                  <h2 className="text-lg font-semibold">Today's Appointments</h2>
+                </div>
+                <p className="text-slate-300/90 text-sm">
+                  {stats.todayAppointmentsCount} appointment{stats.todayAppointmentsCount !== 1 ? "s" : ""} scheduled for today.
                 </p>
+                <div className="mt-4 h-2 w-full rounded-full bg-white/10 overflow-hidden">
+                  <div
+                    className="h-full bg-gradient-to-r from-cyan-300 to-indigo-300"
+                    style={{ width: `${Math.min(100, stats.todayAppointmentsCount * 10)}%` }}
+                  />
+                </div>
               </div>
-              <div className="bg-white/10 backdrop-blur-xl rounded-3xl p-6 border border-white/20 shadow-2xl text-white hover:shadow-white/20 transition-all duration-300">
-                <h2 className="font-bold text-xl mb-2">Quick Stats</h2>
-                <p className="text-gray-300 text-sm">
-                  {stats.confirmedAppointmentsCount} confirmed appointment{stats.confirmedAppointmentsCount !== 1 ? 's' : ''} pending completion
+
+              <div className={`${CARD} p-6`}>
+                <div className="flex items-center gap-3 mb-2">
+                  <div className={`p-2 rounded-xl ${ACCENT_GRADIENT} text-slate-950 ring-1 ring-white/10`}>
+                    <CheckCircle className="w-5 h-5" />
+                  </div>
+                  <h2 className="text-lg font-semibold">Quick Stats</h2>
+                </div>
+                <p className="text-slate-300/90 text-sm">
+                  {stats.confirmedAppointmentsCount} confirmed appointment{stats.confirmedAppointmentsCount !== 1 ? "s" : ""} pending completion.
                 </p>
+                <ul className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                  <li className="rounded-xl bg-white/5 ring-1 ring-white/10 p-3">
+                    <div className="text-slate-400">Active services</div>
+                    <div className="text-white font-semibold">{nf.format(stats.activeServiceCount)}</div>
+                  </li>
+                  <li className="rounded-xl bg-white/5 ring-1 ring-white/10 p-3">
+                    <div className="text-slate-400">Vehicles</div>
+                    <div className="text-white font-semibold">{nf.format(stats.vehicleCount)}</div>
+                  </li>
+                  <li className="rounded-xl bg-white/5 ring-1 ring-white/10 p-3">
+                    <div className="text-slate-400">Users</div>
+                    <div className="text-white font-semibold">{nf.format(stats.userCount)}</div>
+                  </li>
+                  <li className="rounded-xl bg-white/5 ring-1 ring-white/10 p-3">
+                    <div className="text-slate-400">Revenue</div>
+                    <div className="text-white font-semibold">{cf.format(stats.totalEarnings)}</div>
+                  </li>
+                </ul>
               </div>
-            </div>
+            </section>
           </>
         )}
       </main>

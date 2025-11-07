@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import {
   Users,
   Search,
@@ -9,24 +9,38 @@ import {
   Phone,
   X,
   Loader,
+  Shield,
+  UserCircle,
+  Filter,
 } from "lucide-react";
-import { addAdmin, addEmployee, listEmployees, getEmployeeDetails, updateEmployee, EmployeeDetailDTO, UpdateEmployeeDTO } from "../../api/admin";
+import {
+  addAdmin,
+  addEmployee,
+  listEmployees,
+  getEmployeeDetails,
+  updateEmployee,
+  UpdateEmployeeDTO,
+} from "../../api/admin";
 import useApi from "../../hooks/useApi";
+import { motion, AnimatePresence } from "framer-motion";
 
+// ------------------------------------------------------------
+// Theme tokens (consider extracting to ui/theme.ts)
+// ------------------------------------------------------------
+const ACCENT_GRADIENT = "bg-gradient-to-r from-cyan-400 via-sky-400 to-indigo-400";
+const CARD =
+  "rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl shadow-[0_10px_40px_-12px_rgba(0,0,0,0.6)]";
+const BTN_BASE =
+  "inline-flex items-center gap-2 rounded-xl px-4 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70 focus-visible:ring-offset-0 ring-1 ring-white/10";
+const INPUT =
+  "w-full rounded-xl bg-white/5 text-white placeholder:text-slate-400 px-3 py-2.5 ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-cyan-300/70";
+
+// Types
 type CreateType = "EMPLOYEE" | "ADMIN";
 
-// The backend GET /api/admin/employees returns UserDto with id
-type UserRow = {
-  id?: number;
-  name?: string;
-  firstName?: string;
-  lastName?: string;
-  email: string;
-  role?: string;
-  phoneNumber?: string;
-  isActive?: boolean;
-};
-
+// ------------------------------------------------------------
+// CreateUserForm (glassy)
+// ------------------------------------------------------------
 const CreateUserForm: React.FC<{
   createType: CreateType;
   onSubmit: (data: {
@@ -48,16 +62,14 @@ const CreateUserForm: React.FC<{
   const validate = () => {
     if (!email.trim()) return "Email is required.";
     if (!/^\S+@\S+\.\S+$/.test(email)) return "Please enter a valid email.";
+    if (phoneNumber && !/^[+\d][\d\s()-]{6,}$/.test(phoneNumber)) return "Enter a valid phone number.";
     return null;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const msg = validate();
-    if (msg) {
-      setLocalError(msg);
-      return;
-    }
+    if (msg) return setLocalError(msg);
     setLocalError(null);
     await onSubmit({
       email: email.trim(),
@@ -68,79 +80,77 @@ const CreateUserForm: React.FC<{
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <p className="text-sm text-gray-600">
-        Creating a <span className="font-medium">{createType}</span>
+    <form onSubmit={handleSubmit} className="space-y-4 text-white">
+      <p className="text-sm text-slate-300/90">
+        Creating a <span className={`font-semibold px-2 py-0.5 rounded ${createType === "ADMIN" ? "bg-rose-500/10 ring-1 ring-rose-500/20" : "bg-violet-500/10 ring-1 ring-violet-500/20"}`}>{createType}</span>
       </p>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700">First Name</label>
+          <label className="block text-sm font-medium text-slate-200">First Name</label>
           <input
             type="text"
             value={firstName}
             onChange={(e) => setFirstName(e.target.value)}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+            className={INPUT}
             placeholder="Optional"
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700">Last Name</label>
+          <label className="block text-sm font-medium text-slate-200">Last Name</label>
           <input
             type="text"
             value={lastName}
             onChange={(e) => setLastName(e.target.value)}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+            className={INPUT}
             placeholder="Optional"
           />
         </div>
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700">Email *</label>
+        <label className="block text-sm font-medium text-slate-200">Email *</label>
         <input
           type="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+          className={INPUT}
           required
           placeholder={createType === "ADMIN" ? "admin@company.com" : "employee@company.com"}
         />
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700">Phone Number</label>
+        <label className="block text-sm font-medium text-slate-200">Phone Number</label>
         <input
           type="tel"
           value={phoneNumber}
           onChange={(e) => setPhoneNumber(e.target.value)}
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+          className={INPUT}
           placeholder="Optional"
         />
       </div>
 
       {(localError || error) && (
-        <div className="text-red-600 text-sm">{localError || error}</div>
+        <div className="text-sm text-rose-300 bg-rose-500/10 ring-1 ring-rose-500/20 px-3 py-2 rounded-xl">{localError || error}</div>
       )}
 
-      <div className="flex justify-end gap-2">
+      <div className="flex justify-end gap-2 pt-2">
         <button
           type="button"
           onClick={onCancel}
-          className="px-4 py-2 border rounded-md"
+          className={`${BTN_BASE} bg-white/5 hover:bg-white/10`}
           disabled={isSubmitting}
         >
           Cancel
         </button>
         <button
           type="submit"
-          className="px-4 py-2 bg-blue-600 text-white rounded-md disabled:opacity-60"
+          className={`${BTN_BASE} ${ACCENT_GRADIENT} text-slate-950 hover:brightness-110 disabled:opacity-60`}
           disabled={isSubmitting}
         >
           {isSubmitting ? (
-            <span className="inline-flex items-center gap-2">
-              <Loader className="w-4 h-4 animate-spin" /> Creating…
-            </span>
+            <span className="inline-flex items-center gap-2"><Loader className="w-4 h-4 animate-spin" /> Creating…</span>
           ) : (
             "Create"
           )}
@@ -150,11 +160,11 @@ const CreateUserForm: React.FC<{
   );
 };
 
+// ------------------------------------------------------------
+// Main: UserManagement
+// ------------------------------------------------------------
 const UserManagement: React.FC = () => {
-  const { data: usersRaw, loading, error, refetch } = useApi<UserRow[]>(
-    () => listEmployees(),
-    []
-  );
+  const { data: usersRaw, loading, error, refetch } = useApi<any[]>(() => listEmployees(), []);
   const users = usersRaw ?? [];
 
   const [searchTerm, setSearchTerm] = useState("");
@@ -164,17 +174,20 @@ const UserManagement: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
-  // filter users by search & role
-  const filteredUsers = users.filter((user) => {
-    const matchesSearch =
-      (user.name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (user.email || "").toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesRole =
-      roleFilter === "ALL" || (user.role || "").toUpperCase() === roleFilter;
-    return matchesSearch && matchesRole;
-  });
+  const [editingUser, setEditingUser] = useState<any | null>(null);
+  const [editFormData, setEditFormData] = useState<UpdateEmployeeDTO | null>(null);
+  const [loadingEmployee, setLoadingEmployee] = useState(false);
+  const [savingEmployee, setSavingEmployee] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
 
-  // Create user (Employee/Admin)
+  const filteredUsers = useMemo(() => {
+    return users.filter((user) => {
+      const matchesSearch = (user.name || "").toLowerCase().includes(searchTerm.toLowerCase()) || (user.email || "").toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesRole = roleFilter === "ALL" || (user.role || "").toUpperCase() === roleFilter;
+      return matchesSearch && matchesRole;
+    });
+  }, [users, searchTerm, roleFilter]);
+
   const handleAddUser = async (payload: {
     email: string;
     firstName?: string;
@@ -184,11 +197,8 @@ const UserManagement: React.FC = () => {
     setIsSubmitting(true);
     setFormError(null);
     try {
-      if (createType === "ADMIN") {
-        await addAdmin(payload);
-      } else {
-        await addEmployee(payload);
-      }
+      if (createType === "ADMIN") await addAdmin(payload);
+      else await addEmployee(payload);
       await refetch();
       setShowAddModal(false);
     } catch (err: any) {
@@ -198,66 +208,45 @@ const UserManagement: React.FC = () => {
     }
   };
 
-  const [editingUser, setEditingUser] = useState<UserRow | null>(null);
-  const [editFormData, setEditFormData] = useState<UpdateEmployeeDTO | null>(null);
-  const [loadingEmployee, setLoadingEmployee] = useState(false);
-  const [savingEmployee, setSavingEmployee] = useState(false);
-  const [editError, setEditError] = useState<string | null>(null);
-
-  // Handle edit - only for employees and admins
-  const handleEdit = async (user: UserRow) => {
-    // Only allow editing employees and admins
+  const handleEdit = async (user: any) => {
     if (user.role !== "EMPLOYEE" && user.role !== "ADMIN") {
       alert("Only employees and admins can be edited here. Customers manage their own profiles.");
       return;
     }
-
     if (!user.id) {
       alert("User ID not available. Please refresh the page.");
       return;
     }
-
     try {
       setLoadingEmployee(true);
       setEditError(null);
-      const employeeDetails = await getEmployeeDetails(user.id);
+      const details = await getEmployeeDetails(user.id);
       setEditingUser(user);
       setEditFormData({
-        firstName: employeeDetails.firstName,
-        lastName: employeeDetails.lastName,
-        phoneNumber: employeeDetails.phoneNumber,
-        isActive: employeeDetails.isActive,
+        firstName: details.firstName,
+        lastName: details.lastName,
+        phoneNumber: details.phoneNumber,
+        isActive: details.isActive,
       });
     } catch (err: any) {
-      const errorMsg =
-        err?.response?.data?.message ||
-        err?.response?.data ||
-        err?.message ||
-        "Failed to load employee details";
-      alert(errorMsg);
+      const msg = err?.response?.data?.message || err?.response?.data || err?.message || "Failed to load employee details";
+      alert(msg);
     } finally {
       setLoadingEmployee(false);
     }
   };
 
-  // Handle save employee update
   const handleSaveEmployee = async () => {
     if (!editingUser?.id || !editFormData) return;
-
-    // Validate
-    if (!editFormData.firstName.trim() || editFormData.firstName.trim().length < 2 || editFormData.firstName.trim().length > 50) {
-      setEditError("First name must be between 2-50 characters");
-      return;
+    if (!editFormData.firstName?.trim() || editFormData.firstName.trim().length < 2 || editFormData.firstName.trim().length > 50) {
+      return setEditError("First name must be between 2-50 characters");
     }
-    if (!editFormData.lastName.trim() || editFormData.lastName.trim().length < 2 || editFormData.lastName.trim().length > 50) {
-      setEditError("Last name must be between 2-50 characters");
-      return;
+    if (!editFormData.lastName?.trim() || editFormData.lastName.trim().length < 2 || editFormData.lastName.trim().length > 50) {
+      return setEditError("Last name must be between 2-50 characters");
     }
-    if (!/^0(7[0-9]{8})$/.test(editFormData.phoneNumber.trim())) {
-      setEditError("Invalid phone number format. Must be: 07XXXXXXXX (10 digits)");
-      return;
+    if (!/^0(7[0-9]{8})$/.test(editFormData.phoneNumber?.trim() || "")) {
+      return setEditError("Invalid phone number format. Must be: 07XXXXXXXX (10 digits)");
     }
-
     try {
       setSavingEmployee(true);
       setEditError(null);
@@ -265,18 +254,14 @@ const UserManagement: React.FC = () => {
         firstName: editFormData.firstName.trim(),
         lastName: editFormData.lastName.trim(),
         phoneNumber: editFormData.phoneNumber.trim(),
-        isActive: editFormData.isActive,
+        isActive: !!editFormData.isActive,
       });
       await refetch();
       setEditingUser(null);
       setEditFormData(null);
     } catch (err: any) {
-      const errorMsg =
-        err?.response?.data?.message ||
-        err?.response?.data ||
-        err?.message ||
-        "Failed to update employee";
-      setEditError(errorMsg);
+      const msg = err?.response?.data?.message || err?.response?.data || err?.message || "Failed to update employee";
+      setEditError(msg);
     } finally {
       setSavingEmployee(false);
     }
@@ -286,174 +271,153 @@ const UserManagement: React.FC = () => {
     alert("Delete user is not supported by the backend API.");
   };
 
-  const getRoleBadgeColor = (role?: string) => {
-    switch ((role || "").toUpperCase()) {
-      case "ADMIN":
-        return "bg-red-100 text-red-800";
-      case "EMPLOYEE":
-        return "bg-purple-100 text-purple-800";
-      case "CUSTOMER":
-        return "bg-green-100 text-green-800";
-      default:
-        return "bg-gray-100 text-gray-800";
-    }
+  const roleBadge = (role?: string) => {
+    const r = (role || "").toUpperCase();
+    const tone = r === "ADMIN" ? "rose" : r === "EMPLOYEE" ? "violet" : r === "CUSTOMER" ? "emerald" : "slate";
+    return `px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-${tone}-500/10 text-${tone}-300 ring-1 ring-${tone}-500/20`;
   };
 
-  const total = users.length;
-  const customers = users.filter((u) => (u.role || "").toUpperCase() === "CUSTOMER").length;
-  const employees = users.filter((u) => (u.role || "").toUpperCase() === "EMPLOYEE").length;
-  const admins = users.filter((u) => (u.role || "").toUpperCase() === "ADMIN").length;
+  const totals = useMemo(() => {
+    const total = users.length;
+    const customers = users.filter((u: any) => (u.role || "").toUpperCase() === "CUSTOMER").length;
+    const employees = users.filter((u: any) => (u.role || "").toUpperCase() === "EMPLOYEE").length;
+    const admins = users.filter((u: any) => (u.role || "").toUpperCase() === "ADMIN").length;
+    return { total, customers, employees, admins };
+  }, [users]);
 
   return (
-    <div className="space-y-6">
+    <div className="relative text-white">
+      {/* Backdrop like Home */}
+      <div className="absolute inset-0 -z-10">
+        <div className="absolute inset-0 bg-gradient-to-b from-slate-950/80 via-slate-900/80 to-slate-950/80" />
+        <div className="pointer-events-none absolute -top-40 left-1/2 h-[50rem] w-[50rem] -translate-x-1/2 rounded-full opacity-20 blur-3xl" style={{ background: "radial-gradient(closest-side, rgba(34,211,238,0.35), transparent 70%)" }} />
+        <div className="pointer-events-none absolute top-1/3 right-[-20%] h-[40rem] w-[40rem] rounded-full opacity-15 blur-3xl" style={{ background: "radial-gradient(closest-side, rgba(99,102,241,0.35), transparent 70%)" }} />
+        <div className="absolute inset-0 opacity-[0.07]" style={{ backgroundImage: "linear-gradient(to right, #fff 1px, transparent 1px), linear-gradient(to bottom, #fff 1px, transparent 1px)", backgroundSize: "40px 40px" }} />
+      </div>
+
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">User Management</h1>
-          <p className="text-gray-600 mt-1">Manage all users in the system</p>
+        <div className="flex items-center gap-3">
+          <div className={`p-2 rounded-xl ${ACCENT_GRADIENT} text-slate-950 ring-1 ring-white/10`}>
+            <Shield className="w-5 h-5" />
+          </div>
+          <div>
+            <h1 className="text-2xl md:text-3xl font-bold tracking-tight">User Management</h1>
+            <p className="text-slate-300/90 text-sm">Manage all users in the system</p>
+          </div>
         </div>
         <button
           onClick={() => setShowAddModal(true)}
-          className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+          className={`${BTN_BASE} ${ACCENT_GRADIENT} text-slate-950 hover:brightness-110`}
         >
-          <Plus className="w-5 h-5" />
-          Add User
+          <Plus className="w-5 h-5" /> Add User
         </button>
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-gray-600 text-sm">Total Users</p>
-              <p className="text-2xl font-bold text-gray-900">{total}</p>
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-5 mt-6">
+        {[
+          { label: "Total Users", value: totals.total, tone: "cyan" },
+          { label: "Customers", value: totals.customers, tone: "emerald" },
+          { label: "Employees", value: totals.employees, tone: "violet" },
+          { label: "Admins", value: totals.admins, tone: "rose" },
+        ].map((s, i) => (
+          <motion.div
+            key={s.label}
+            className={`${CARD} p-5`}
+            whileHover={{ y: -2 }}
+            transition={{ type: "spring", stiffness: 250, damping: 20 }}
+          >
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-slate-300/90 text-sm">{s.label}</p>
+                <p className="text-3xl font-extrabold tracking-tight text-cyan-300">{s.value}</p>
+              </div>
+              <div className={`w-10 h-10 grid place-items-center rounded-xl ring-1 ring-white/10 bg-white/5`}>
+                <Users className="w-6 h-6" />
+              </div>
             </div>
-            <Users className="w-10 h-10 text-blue-500" />
-          </div>
-        </div>
-
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-gray-600 text-sm">Customers</p>
-              <p className="text-2xl font-bold text-gray-900">{customers}</p>
-            </div>
-            <Users className="w-10 h-10 text-green-500" />
-          </div>
-        </div>
-
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-gray-600 text-sm">Employees</p>
-              <p className="text-2xl font-bold text-gray-900">{employees}</p>
-            </div>
-            <Users className="w-10 h-10 text-purple-500" />
-          </div>
-        </div>
-
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-gray-600 text-sm">Admins</p>
-              <p className="text-2xl font-bold text-gray-900">{admins}</p>
-            </div>
-            <Users className="w-10 h-10 text-emerald-500" />
-          </div>
-        </div>
+          </motion.div>
+        ))}
       </div>
 
       {/* Filters */}
-      <div className="bg-white rounded-lg shadow p-6">
+      <div className={`${CARD} p-5 mt-6`}>
         <div className="flex flex-col md:flex-row gap-4">
-          {/* Search */}
           <div className="flex-1">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
               <input
                 type="text"
                 placeholder="Search by name or email..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className={`${INPUT} pl-10`}
               />
             </div>
           </div>
-
-          {/* Role Filter */}
-          <div className="md:w-48">
-            <select
-              value={roleFilter}
-              onChange={(e) => setRoleFilter(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="ALL">All Roles</option>
-              <option value="CUSTOMER">Customer</option>
-              <option value="EMPLOYEE">Employee</option>
-              <option value="ADMIN">Admin</option>
-            </select>
+          <div className="md:w-56">
+            <div className="relative">
+              <Filter className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
+              <select
+                value={roleFilter}
+                onChange={(e) => setRoleFilter(e.target.value)}
+                className={`${INPUT} appearance-none pl-10 pr-8`}
+              >
+                <option className="bg-slate-900" value="ALL">All Roles</option>
+                <option className="bg-slate-900" value="CUSTOMER">Customer</option>
+                <option className="bg-slate-900" value="EMPLOYEE">Employee</option>
+                <option className="bg-slate-900" value="ADMIN">Admin</option>
+              </select>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Users Table */}
-      <div className="bg-white rounded-lg shadow overflow-hidden">
+      {/* Users Table / Cards */}
+      <div className={`${CARD} mt-6 overflow-hidden`}>
         {error ? (
-          <div className="p-12 text-center text-red-600">
-            Error loading users: {error.message}
-          </div>
+          <div className="p-12 text-center text-rose-300">Error loading users: {error.message}</div>
         ) : loading ? (
           <div className="p-12 text-center">
-            <div className="inline-block w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-            <p className="mt-4 text-gray-600">Loading users...</p>
+            <div className="inline-block w-8 h-8 border-4 border-cyan-300 border-t-transparent rounded-full animate-spin"></div>
+            <p className="mt-4 text-slate-300/90">Loading users...</p>
           </div>
         ) : filteredUsers.length === 0 ? (
           <div className="p-12 text-center">
-            <Users className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-            <p className="text-gray-600">No users found</p>
+            <UserCircle className="w-16 h-16 text-slate-500 mx-auto mb-4" />
+            <p className="text-slate-300/90">No users found</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50 border-b border-gray-200">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                    User
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                    Contact
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                    Role
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                    Actions
-                  </th>
+            <table className="w-full text-sm">
+              <thead className="bg-white/5">
+                <tr className="text-left">
+                  {['User','Contact','Role','Actions'].map((h) => (
+                    <th key={h} className="px-6 py-3 font-semibold text-slate-300/90">{h}</th>
+                  ))}
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {filteredUsers.map((user) => {
+              <tbody className="divide-y divide-white/10">
+                {filteredUsers.map((user: any) => {
                   const initials = (user.name || "")
                     .split(" ")
                     .filter(Boolean)
                     .slice(0, 2)
-                    .map((s) => s.charAt(0))
+                    .map((s: string) => s.charAt(0))
                     .join("")
                     .toUpperCase();
 
                   return (
-                    <tr key={user.id || user.email} className="hover:bg-gray-50">
+                    <tr key={user.id || user.email} className="hover:bg-white/5">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
-                          <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold">
+                          <div className={`w-10 h-10 ${ACCENT_GRADIENT} rounded-xl grid place-items-center text-slate-950 font-bold ring-1 ring-white/10`}>
                             {initials || "U"}
                           </div>
                           <div className="ml-4">
-                            <div className="text-sm font-medium text-gray-900">
-                              {user.name || "—"}
-                            </div>
-                            <div className="text-sm text-gray-500 flex items-center gap-1">
+                            <div className="font-medium text-white">{user.name || "—"}</div>
+                            <div className="text-slate-300/90 flex items-center gap-1">
                               <Mail className="w-3 h-3" />
                               {user.email}
                             </div>
@@ -461,36 +425,30 @@ const UserManagement: React.FC = () => {
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900 flex items-center gap-1">
+                        <div className="text-white flex items-center gap-1">
                           <Phone className="w-3 h-3" />
                           {user.phoneNumber || "N/A"}
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span
-                          className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getRoleBadgeColor(
-                            user.role
-                          )}`}
-                        >
-                          {user.role || "—"}
-                        </span>
+                        <span className={roleBadge(user.role)}>{user.role || "—"}</span>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                      <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center gap-2">
                           <button
                             onClick={() => handleEdit(user)}
-                            className="text-blue-600 hover:text-blue-900"
+                            className={`${BTN_BASE} bg-white/5 hover:bg-white/10`}
                             title="Edit"
                             disabled={user.role === "CUSTOMER"}
                           >
-                            <Edit className="w-5 h-5" />
+                            <Edit className="w-4 h-4" />
                           </button>
                           <button
                             onClick={deleteUser}
-                            className="text-red-600 hover:text-red-900"
+                            className={`${BTN_BASE} bg-white/5 hover:bg-white/10`}
                             title="Delete"
                           >
-                            <Trash2 className="w-5 h-5" />
+                            <Trash2 className="w-4 h-4" />
                           </button>
                         </div>
                       </td>
@@ -503,232 +461,201 @@ const UserManagement: React.FC = () => {
         )}
       </div>
 
-      {/* Pagination (static demo) */}
-      <div className="bg-white rounded-lg shadow px-6 py-4">
-        <div className="flex items-center justify-between">
-          <p className="text-sm text-gray-700">
-            Showing <span className="font-medium">{filteredUsers.length}</span>{" "}
-            of <span className="font-medium">{users.length}</span> users
+      {/* Footer / Pagination (static demo) */}
+      <div className={`${CARD} px-6 py-4 mt-4`}>
+        <div className="flex items-center justify-between text-slate-300/90 text-sm">
+          <p>
+            Showing <span className="font-semibold">{filteredUsers.length}</span> of {" "}
+            <span className="font-semibold">{users.length}</span> users
           </p>
           <div className="flex gap-2">
-            <button className="px-3 py-1 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm">
-              Previous
-            </button>
-            <button className="px-3 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm">
-              1
-            </button>
-            <button className="px-3 py-1 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm">
-              2
-            </button>
-            <button className="px-3 py-1 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm">
-              Next
-            </button>
+            <button className={`${BTN_BASE} bg-white/5 hover:bg-white/10`}>Previous</button>
+            <button className={`${BTN_BASE} ${ACCENT_GRADIENT} text-slate-950`}>1</button>
+            <button className={`${BTN_BASE} bg-white/5 hover:bg-white/10`}>2</button>
+            <button className={`${BTN_BASE} bg-white/5 hover:bg-white/10`}>Next</button>
           </div>
         </div>
       </div>
 
       {/* Add User Modal */}
-      {showAddModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4">
-            <div className="flex justify-between items-center p-6 border-b">
-              <h2 className="text-xl font-semibold">Add New User</h2>
-              <button
-                onClick={() => setShowAddModal(false)}
-                className="text-gray-400 hover:text-gray-500"
-              >
-                <X className="w-6 h-6" />
-              </button>
-            </div>
-
-            <div className="px-6 pt-4">
-              <div className="mb-4 flex gap-2">
-                <button
-                  type="button"
-                  className={`px-3 py-1 rounded ${
-                    createType === "EMPLOYEE"
-                      ? "bg-blue-600 text-white"
-                      : "border"
-                  }`}
-                  onClick={() => setCreateType("EMPLOYEE")}
-                >
-                  Employee
-                </button>
-                <button
-                  type="button"
-                  className={`px-3 py-1 rounded ${
-                    createType === "ADMIN"
-                      ? "bg-purple-600 text-white"
-                      : "border"
-                  }`}
-                  onClick={() => setCreateType("ADMIN")}
-                >
-                  Admin
+      <AnimatePresence>
+        {showAddModal && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 grid place-items-center">
+            <div className="absolute inset-0 bg-black/60" onClick={() => setShowAddModal(false)} />
+            <motion.div
+              initial={{ y: 24, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: 24, opacity: 0 }}
+              className={`${CARD} relative w-full max-w-2xl mx-4`}
+            >
+              <div className="flex justify-between items-center p-5 border-b border-white/10">
+                <div className="flex items-center gap-2">
+                  <div className={`p-1.5 rounded-lg ${ACCENT_GRADIENT} text-slate-950 ring-1 ring-white/10`}>
+                    <Users className="w-4 h-4" />
+                  </div>
+                  <h2 className="text-lg font-semibold">Add New User</h2>
+                </div>
+                <button onClick={() => setShowAddModal(false)} className={`${BTN_BASE} bg-white/5 hover:bg-white/10`}>
+                  <X className="w-5 h-5" />
                 </button>
               </div>
-            </div>
 
-            <div className="p-6">
-              <CreateUserForm
-                createType={createType}
-                onSubmit={async (payload) => {
-                  await handleAddUser(payload);
-                }}
-                onCancel={() => setShowAddModal(false)}
-                isSubmitting={isSubmitting}
-                error={formError}
-              />
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Edit Employee/Admin Modal */}
-      {editingUser && editFormData && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center p-6 border-b">
-              <h2 className="text-xl font-semibold">
-                Edit {editingUser.role === "ADMIN" ? "Admin" : "Employee"} Profile
-              </h2>
-              <button
-                onClick={() => {
-                  setEditingUser(null);
-                  setEditFormData(null);
-                  setEditError(null);
-                }}
-                className="text-gray-400 hover:text-gray-500"
-              >
-                <X className="w-6 h-6" />
-              </button>
-            </div>
-
-            <div className="p-6">
-              {loadingEmployee ? (
-                <div className="flex items-center justify-center py-8">
-                  <Loader className="w-8 h-8 animate-spin text-blue-600" />
+              <div className="p-5">
+                <div className="mb-4 flex gap-2">
+                  <button
+                    type="button"
+                    className={`${BTN_BASE} ${createType === "EMPLOYEE" ? `${ACCENT_GRADIENT} text-slate-950` : "bg-white/5 hover:bg-white/10"}`}
+                    onClick={() => setCreateType("EMPLOYEE")}
+                  >
+                    Employee
+                  </button>
+                  <button
+                    type="button"
+                    className={`${BTN_BASE} ${createType === "ADMIN" ? `${ACCENT_GRADIENT} text-slate-950` : "bg-white/5 hover:bg-white/10"}`}
+                    onClick={() => setCreateType("ADMIN")}
+                  >
+                    Admin
+                  </button>
                 </div>
-              ) : (
-                <div className="space-y-4">
-                  {editError && (
-                    <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-red-800 text-sm">
-                      {editError}
-                    </div>
-                  )}
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Email
-                    </label>
-                    <input
-                      type="email"
-                      value={editingUser.email}
-                      disabled
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-500 cursor-not-allowed"
-                    />
-                    <p className="mt-1 text-xs text-gray-500">Email cannot be changed</p>
+                <CreateUserForm
+                  createType={createType}
+                  onSubmit={async (payload) => {
+                    await handleAddUser(payload);
+                  }}
+                  onCancel={() => setShowAddModal(false)}
+                  isSubmitting={isSubmitting}
+                  error={formError}
+                />
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Edit Modal */}
+      <AnimatePresence>
+        {editingUser && editFormData && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 grid place-items-center">
+            <div className="absolute inset-0 bg-black/60" onClick={() => { setEditingUser(null); setEditFormData(null); setEditError(null); }} />
+            <motion.div
+              initial={{ y: 24, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: 24, opacity: 0 }}
+              className={`${CARD} relative w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto`}
+            >
+              <div className="flex justify-between items-center p-5 border-b border-white/10">
+                <div className="flex items-center gap-2">
+                  <div className={`p-1.5 rounded-lg ${ACCENT_GRADIENT} text-slate-950 ring-1 ring-white/10`}>
+                    <Edit className="w-4 h-4" />
                   </div>
+                  <h2 className="text-lg font-semibold">Edit {editingUser.role === "ADMIN" ? "Admin" : "Employee"} Profile</h2>
+                </div>
+                <button onClick={() => { setEditingUser(null); setEditFormData(null); setEditError(null); }} className={`${BTN_BASE} bg-white/5 hover:bg-white/10`}>
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
 
-                  <div className="grid grid-cols-2 gap-4">
+              <div className="p-5">
+                {loadingEmployee ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader className="w-8 h-8 animate-spin text-cyan-300" />
+                  </div>
+                ) : (
+                  <div className="space-y-4 text-white">
+                    {editError && (
+                      <div className="bg-rose-500/10 ring-1 ring-rose-500/20 rounded-xl p-3 text-rose-300 text-sm">{editError}</div>
+                    )}
+
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        First Name <span className="text-red-500">*</span>
-                      </label>
+                      <label className="block text-sm font-medium text-slate-200 mb-1">Email</label>
                       <input
-                        type="text"
-                        value={editFormData.firstName}
-                        onChange={(e) =>
-                          setEditFormData({ ...editFormData, firstName: e.target.value })
-                        }
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        type="email"
+                        value={editingUser.email}
+                        disabled
+                        className={`${INPUT} bg-white/10 text-slate-300 cursor-not-allowed`}
+                      />
+                      <p className="mt-1 text-xs text-slate-400">Email cannot be changed</p>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-slate-200 mb-1">First Name <span className="text-rose-300">*</span></label>
+                        <input
+                          type="text"
+                          value={editFormData.firstName}
+                          onChange={(e) => setEditFormData({ ...editFormData, firstName: e.target.value })}
+                          className={INPUT}
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-200 mb-1">Last Name <span className="text-rose-300">*</span></label>
+                        <input
+                          type="text"
+                          value={editFormData.lastName}
+                          onChange={(e) => setEditFormData({ ...editFormData, lastName: e.target.value })}
+                          className={INPUT}
+                          required
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-slate-200 mb-1">Phone Number <span className="text-rose-300">*</span></label>
+                      <input
+                        type="tel"
+                        value={editFormData.phoneNumber}
+                        onChange={(e) => setEditFormData({ ...editFormData, phoneNumber: e.target.value })}
+                        placeholder="07XXXXXXXX"
+                        className={INPUT}
                         required
                       />
+                      <p className="mt-1 text-xs text-slate-400">Format: 07XXXXXXXX (10 digits)</p>
                     </div>
+
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Last Name <span className="text-red-500">*</span>
+                      <label className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={!!editFormData.isActive}
+                          onChange={(e) => setEditFormData({ ...editFormData, isActive: e.target.checked })}
+                          className="w-4 h-4 text-cyan-300 bg-white/5 border-white/20 rounded focus:ring-cyan-300/70"
+                        />
+                        <span className="text-sm font-medium text-slate-200">Active Account</span>
                       </label>
-                      <input
-                        type="text"
-                        value={editFormData.lastName}
-                        onChange={(e) =>
-                          setEditFormData({ ...editFormData, lastName: e.target.value })
-                        }
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        required
-                      />
+                      <p className="mt-1 text-xs text-slate-400">Inactive accounts cannot log in to the system</p>
+                    </div>
+
+                    <div className="flex justify-end gap-2 pt-4 border-t border-white/10">
+                      <button
+                        type="button"
+                        onClick={() => { setEditingUser(null); setEditFormData(null); setEditError(null); }}
+                        className={`${BTN_BASE} bg-white/5 hover:bg-white/10`}
+                        disabled={savingEmployee}
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleSaveEmployee}
+                        disabled={savingEmployee}
+                        className={`${BTN_BASE} ${ACCENT_GRADIENT} text-slate-950 disabled:opacity-50 disabled:cursor-not-allowed`}
+                      >
+                        {savingEmployee ? (
+                          <span className="inline-flex items-center gap-2"><Loader className="w-4 h-4 animate-spin" /> Saving…</span>
+                        ) : (
+                          "Save Changes"
+                        )}
+                      </button>
                     </div>
                   </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Phone Number <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="tel"
-                      value={editFormData.phoneNumber}
-                      onChange={(e) =>
-                        setEditFormData({ ...editFormData, phoneNumber: e.target.value })
-                      }
-                      placeholder="07XXXXXXXX"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      required
-                    />
-                    <p className="mt-1 text-xs text-gray-500">Format: 07XXXXXXXX (10 digits)</p>
-                  </div>
-
-                  <div>
-                    <label className="flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        checked={editFormData.isActive}
-                        onChange={(e) =>
-                          setEditFormData({ ...editFormData, isActive: e.target.checked })
-                        }
-                        className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                      />
-                      <span className="text-sm font-medium text-gray-700">Active Account</span>
-                    </label>
-                    <p className="mt-1 text-xs text-gray-500">
-                      Inactive accounts cannot log in to the system
-                    </p>
-                  </div>
-
-                  <div className="flex justify-end gap-2 pt-4 border-t">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setEditingUser(null);
-                        setEditFormData(null);
-                        setEditError(null);
-                      }}
-                      className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-                      disabled={savingEmployee}
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleSaveEmployee}
-                      disabled={savingEmployee}
-                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                    >
-                      {savingEmployee ? (
-                        <>
-                          <Loader className="w-4 h-4 animate-spin" />
-                          Saving...
-                        </>
-                      ) : (
-                        "Save Changes"
-                      )}
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
+                )}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
