@@ -10,7 +10,7 @@ import axios from "axios";
 
 // Vite-compatible access to env
 const API_URL =
-  import.meta.env.REACT_APP_BACKEND_URL || "http://localhost:8080";
+  import.meta.env.REACT_APP_BACKEND_URL || "http://3.7.205.141:8080";
 
 console.log("Frontend connected to API base:", API_URL);
 
