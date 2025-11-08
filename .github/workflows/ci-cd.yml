@@ -1,4 +1,4 @@
-name: build and push to ECR
+name: Build and Push to ECR
 
 on:
   push:
@@ -11,103 +11,58 @@ permissions:
 
 env:
   AWS_REGION: ap-south-1
-  ECR_REPOSITORY_FRONTEND: gear-sync/frontend
-  ECR_REPOSITORY_BACKEND: gear-sync/backend
-  ECR_REPOSITORY_CHAT_BOT: gear-sync/chat-bot
-  IMAGE_TAG: latest
   AWS_ROLE_ARN: arn:aws:iam::509951859952:role/GitHubAction-Role
   ECR_REGISTRY: 509951859952.dkr.ecr.ap-south-1.amazonaws.com
+  IMAGE_TAG: ${{ github.ref_name }}-${{ github.sha }}
+  CACHE_FROM: type=gha
+  CACHE_TO: type=gha,mode=max
 
 jobs:
-  frontend:
-    name: Build and Push Frontend Docker Image to ECR
+  build-and-push:
+    name: Build and Push Docker Images (Frontend, Backend, ChatBot)
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - name: frontend
+            path: ./frontend
+            dockerfile: ./frontend/Dockerfile
+            repository: gear-sync/frontend
+          - name: backend
+            path: ./backend
+            dockerfile: ./backend/Dockerfile
+            repository: gear-sync/backend
+          - name: chatbot
+            path: ./chatbot-service
+            dockerfile: ./chatbot-service/Dockerfile
+            repository: gear-sync/chat-bot
 
     steps:
-      - name: Checkout repository
+      - name: 🧩 Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
-        with:
-          install: true
+      - name: ⚙️ Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
-      - name: Configure AWS Credentials (OIDC)
+      - name: 🔐 Configure AWS Credentials via OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ env.AWS_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
-      
-      - name: Login to AWS
-        run: aws ecr get-login-password --region ${{ env.AWS_REGION }} | docker login --username AWS --password-stdin ${{ env.ECR_REGISTRY }}
 
-      - name: Build, Tag, and Push Frontend Docker Image to ECR
-        run: |
-         docker buildx create --use
-          docker buildx build \
-          --platform linux/amd64 \
-          -t ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY_FRONTEND }}:${{ env.IMAGE_TAG }} \
-          -f ./frontend/Dockerfile ./frontend \
-          --push
+      - name: 🪣 Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
 
-  backend: 
-    name: Build and Push Backend Docker Image to ECR
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
+      - name: 🧱 Build and Push ${{ matrix.name }} Image
+        uses: docker/build-push-action@v5
         with:
-          install: true
-
-      - name: Configure AWS Credentials (OIDC)
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: ${{ env.AWS_ROLE_ARN }}
-          aws-region: ${{ env.AWS_REGION }}
-      
-      - name: Login to AWS
-        run: aws ecr get-login-password --region ${{ env.AWS_REGION }} | docker login --username AWS --password-stdin ${{ env.ECR_REGISTRY }}
-
-      - name: Build, Tag, and Push Frontend Docker Image to ECR
-        run: |
-         docker buildx create --use
-          docker buildx build \
-          --platform linux/amd64 \
-          -t ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY_BACKEND }}:${{ env.IMAGE_TAG }} \
-          -f ./backend/Dockerfile ./backend \
-          --push
-
-  chat-bot: 
-    name: Build and Push Chat Bot Docker Image to ECR
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
-        with:
-          install: true
-
-      - name: Configure AWS Credentials (OIDC)
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: ${{ env.AWS_ROLE_ARN }}
-          aws-region: ${{ env.AWS_REGION }}
-      
-      - name: Login to AWS
-        run: aws ecr get-login-password --region ${{ env.AWS_REGION }} | docker login --username AWS --password-stdin ${{ env.ECR_REGISTRY }}
-
-      - name: Build, Tag, and Push Frontend Docker Image to ECR
-        run: |
-         docker buildx create --use
-          docker buildx build \
-          --platform linux/amd64 \
-          -t ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY_CHAT_BOT }}:${{ env.IMAGE_TAG }} \
-          -f ./chatbot-service/Dockerfile ./chatbot-service \
-          --push
+          context: ${{ matrix.path }}
+          file: ${{ matrix.dockerfile }}
+          push: true
+          platforms: linux/amd64
+          tags: |
+            ${{ env.ECR_REGISTRY }}/${{ matrix.repository }}:${{ env.IMAGE_TAG }}
+            ${{ env.ECR_REGISTRY }}/${{ matrix.repository }}:latest
+          # cache-from: ${{ env.CACHE_FROM }}
+          # cache-to: ${{ env.CACHE_TO }}
