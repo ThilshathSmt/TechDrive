@@ -1,0 +1,41 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gearsync-backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: gearsync-backend
+  template:
+    metadata:
+      labels:
+        app: gearsync-backend
+    spec:
+      containers:
+        - name: backend
+          image: faskath513/gearsync-backend:latest
+          ports:
+            - containerPort: 8080
+          env:
+            - name: DATASOURCE_URL
+              value: jdbc:postgresql://gearsync-postgres:5432/gearsync_db
+            - name: DATASOURCE_USERNAME
+              value: gearsync_user
+            - name: DATASOURCE_PASSWORD
+              value: gearsync@1212
+          envFrom:
+            - secretRef:
+                name: gearsync-secrets
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: gearsync-backend
+spec:
+  selector:
+    app: gearsync-backend
+  ports:
+    - port: 8080
+      targetPort: 8080
+  type: ClusterIP

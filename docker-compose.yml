@@ -1,0 +1,65 @@
+
+
+services:
+  gearsync-db:
+    image: postgres:16
+    container_name: gearsync-db
+    environment:
+      POSTGRES_USER: gearsync_user
+      POSTGRES_PASSWORD: gearsync@1212
+      POSTGRES_DB: gearsync_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - gearsync-network
+
+  gearsync-backend:
+    build: ./backend
+    container_name: gearsync-backend
+    depends_on:
+      - gearsync-db
+    ports:
+      - "8080:8080"
+    env_file:
+      - ./backend/.env
+    environment:
+      DATASOURCE_URL: jdbc:postgresql://gearsync-db:5432/gearsync_db
+      DATASOURCE_USERNAME: gearsync_user
+      DATASOURCE_PASSWORD: gearsync@1212
+    networks:
+      - gearsync-network
+
+  chatbot-service:
+    build: ./chatbot-service
+    container_name: chatbot-service
+    depends_on:
+      - gearsync-db
+    ports:
+      - "8000:8000"
+    env_file:
+      - ./chatbot-service/.env
+    networks:
+      - gearsync-network
+
+  gearsync-frontend:
+    build: ./frontend
+    container_name: gearsync-frontend
+    depends_on:
+      - gearsync-backend
+      - chatbot-service
+    ports:
+      - "3000:80"
+    environment:
+      REACT_APP_BACKEND_URL: http://gearsync-backend:8080
+      REACT_APP_CHATBOT_URL: http://chatbot-service:8000
+    networks:
+      - gearsync-network
+
+networks:
+  gearsync-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
