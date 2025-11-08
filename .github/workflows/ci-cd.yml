@@ -11,7 +11,9 @@ permissions:
 
 env:
   AWS_REGION: ap-south-1
-  ECR_REPOSITORY: gear-sync/frontend
+  ECR_REPOSITORY_FRONTEND: gear-sync/frontend
+  ECR_REPOSITORY_BACKEND: gear-sync/backend
+  ECR_REPOSITORY_CHAT_BOT: gear-sync/chat-bot
   IMAGE_TAG: latest
   AWS_ROLE_ARN: arn:aws:iam::509951859952:role/GitHubAction-Role
   ECR_REGISTRY: 509951859952.dkr.ecr.ap-south-1.amazonaws.com
@@ -44,6 +46,68 @@ jobs:
          docker buildx create --use
           docker buildx build \
           --platform linux/amd64 \
-          -t ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }} \
+          -t ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY_FRONTEND }}:${{ env.IMAGE_TAG }} \
           -f ./frontend/Dockerfile ./frontend \
+          --push
+
+  backend: 
+    name: Build and Push Backend Docker Image to ECR
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+        with:
+          install: true
+
+      - name: Configure AWS Credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+      
+      - name: Login to AWS
+        run: aws ecr get-login-password --region ${{ env.AWS_REGION }} | docker login --username AWS --password-stdin ${{ env.ECR_REGISTRY }}
+
+      - name: Build, Tag, and Push Frontend Docker Image to ECR
+        run: |
+         docker buildx create --use
+          docker buildx build \
+          --platform linux/amd64 \
+          -t ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY_BACKEND }}:${{ env.IMAGE_TAG }} \
+          -f ./backend/Dockerfile ./backend \
+          --push
+
+  chat-bot: 
+    name: Build and Push Chat Bot Docker Image to ECR
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+        with:
+          install: true
+
+      - name: Configure AWS Credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+      
+      - name: Login to AWS
+        run: aws ecr get-login-password --region ${{ env.AWS_REGION }} | docker login --username AWS --password-stdin ${{ env.ECR_REGISTRY }}
+
+      - name: Build, Tag, and Push Frontend Docker Image to ECR
+        run: |
+         docker buildx create --use
+          docker buildx build \
+          --platform linux/amd64 \
+          -t ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY_CHAT_BOT }}:${{ env.IMAGE_TAG }} \
+          -f ./chatbot-service/Dockerfile ./chatbot-service \
           --push
