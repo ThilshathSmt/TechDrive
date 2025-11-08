@@ -58,14 +58,46 @@ const AdminDashboard: React.FC = () => {
           confirmedAppointments,
           todayAppointments,
         ] = await Promise.all([
-          getDashboardUserCount(),
-          getDashboardAppointmentCount(),
-          getDashboardVehicleCount(),
-          getDashboardTotalEarnings(),
-          getDashboardActiveServiceCount(),
-          getDashboardConfirmedAppointments(),
-          getDashboardTodayAppointments(),
+          getDashboardUserCount().catch(err => {
+            console.error("Error fetching user count:", err);
+            return 0;
+          }),
+          getDashboardAppointmentCount().catch(err => {
+            console.error("Error fetching appointment count:", err);
+            return 0;
+          }),
+          getDashboardVehicleCount().catch(err => {
+            console.error("Error fetching vehicle count:", err);
+            return 0;
+          }),
+          getDashboardTotalEarnings().catch(err => {
+            console.error("Error fetching total earnings:", err);
+            return 0;
+          }),
+          getDashboardActiveServiceCount().catch(err => {
+            console.error("Error fetching active service count:", err);
+            return 0;
+          }),
+          getDashboardConfirmedAppointments().catch(err => {
+            console.error("Error fetching confirmed appointments:", err);
+            return [];
+          }),
+          getDashboardTodayAppointments().catch(err => {
+            console.error("Error fetching today appointments:", err);
+            return [];
+          }),
         ]);
+        
+        console.log("Dashboard data received:", {
+          userCount,
+          appointmentCount,
+          vehicleCount,
+          totalEarnings,
+          activeServiceCount,
+          confirmedAppointments,
+          todayAppointments,
+        });
+        
         setStats({
           userCount: Number(userCount) || 0,
           appointmentCount: Number(appointmentCount) || 0,

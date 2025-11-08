@@ -1,6 +1,6 @@
 package com.gearsync.backend.service;
 
-import com.gearsync.backend.dto.AdminDashboardCountsDTO;
+import com.gearsync.backend.dto.AppointmentSummaryDTO;
 import com.gearsync.backend.model.Appointment;
 import com.gearsync.backend.model.AppointmentStatus;
 import com.gearsync.backend.repository.AppointmentRepository;
@@ -14,6 +14,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -40,7 +41,8 @@ public class AdminDashboardService {
 
     @Transactional(readOnly = true)
     public BigDecimal getTotalEarningsCompleted() {
-        return appointmentRepository.sumFinalCostByStatus(AppointmentStatus.COMPLETED);
+        BigDecimal result = appointmentRepository.sumFinalCostByStatus(AppointmentStatus.COMPLETED);
+        return result != null ? result : BigDecimal.ZERO;
     }
 
     @Transactional(readOnly = true)
@@ -49,15 +51,47 @@ public class AdminDashboardService {
     }
 
     @Transactional(readOnly = true)
-    public List<Appointment> getConfirmedAppointments() {
-        return appointmentRepository.findByStatusOrderByScheduledDateTimeAsc(AppointmentStatus.CONFIRMED);
+    public List<AppointmentSummaryDTO> getConfirmedAppointments() {
+        List<Appointment> appointments = appointmentRepository.findByStatusOrderByScheduledDateTimeAsc(AppointmentStatus.CONFIRMED);
+        return appointments.stream()
+                .map(this::convertToSummaryDTO)
+                .collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)
-    public List<Appointment> getTodayScheduledAppointments() {
+    public List<AppointmentSummaryDTO> getTodayScheduledAppointments() {
         LocalDate today = LocalDate.now();
         LocalDateTime start = today.atStartOfDay();
         LocalDateTime end = today.plusDays(1).atStartOfDay().minusNanos(1);
-        return appointmentRepository.findByScheduledDateTimeBetweenOrderByScheduledDateTimeAsc(start, end);
+        List<Appointment> appointments = appointmentRepository.findByScheduledDateTimeBetweenOrderByScheduledDateTimeAsc(start, end);
+        return appointments.stream()
+                .map(this::convertToSummaryDTO)
+                .collect(Collectors.toList());
+    }
+
+    private AppointmentSummaryDTO convertToSummaryDTO(Appointment appointment) {
+        AppointmentSummaryDTO dto = new AppointmentSummaryDTO();
+        dto.setId(appointment.getId());
+        dto.setScheduledDateTime(appointment.getScheduledDateTime());
+        dto.setStatus(appointment.getStatus().name());
+        dto.setProgressPercentage(appointment.getProgressPercentage());
+        dto.setCreatedAt(appointment.getCreatedAt());
+        
+        if (appointment.getCustomer() != null) {
+            dto.setCustomerName(appointment.getCustomer().getFirstName() + " " + appointment.getCustomer().getLastName());
+            dto.setCustomerEmail(appointment.getCustomer().getEmail());
+        }
+        
+        if (appointment.getVehicle() != null) {
+            dto.setVehicleRegistrationNumber(appointment.getVehicle().getRegistrationNumber());
+            dto.setVehicleMake(appointment.getVehicle().getMake());
+            dto.setVehicleModel(appointment.getVehicle().getModel());
+        }
+        
+        if (appointment.getAssignedEmployee() != null) {
+            dto.setAssignedEmployeeName(appointment.getAssignedEmployee().getFirstName() + " " + appointment.getAssignedEmployee().getLastName());
+        }
+        
+        return dto;
     }
 }

@@ -1,6 +1,6 @@
 package com.gearsync.backend.controller;
 
-import com.gearsync.backend.model.Appointment;
+import com.gearsync.backend.dto.AppointmentSummaryDTO;
 import com.gearsync.backend.service.AdminDashboardService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -72,7 +72,7 @@ public class AdminDashboardController {
     @GetMapping("/appointments/confirmed")
     public ResponseEntity<?> confirmedAppointments() {
         try {
-            List<Appointment> list = adminDashboardService.getConfirmedAppointments();
+            List<AppointmentSummaryDTO> list = adminDashboardService.getConfirmedAppointments();
             return ResponseEntity.ok(list);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
@@ -82,7 +82,7 @@ public class AdminDashboardController {
     @GetMapping("/appointments/today")
     public ResponseEntity<?> todayAppointments() {
         try {
-            List<Appointment> list = adminDashboardService.getTodayScheduledAppointments();
+            List<AppointmentSummaryDTO> list = adminDashboardService.getTodayScheduledAppointments();
             return ResponseEntity.ok(list);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
