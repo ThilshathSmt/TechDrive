@@ -173,3 +173,46 @@ export const updateEmployee = async (
   const res = await api.put<EmployeeDetailDTO>(`admin/employees/${employeeId}`, data);
   return res.data;
 };
+
+// Reports & Analytics Interfaces
+export interface RevenueDataPoint {
+  month: string;
+  revenue: number;
+  appointmentCount: number;
+}
+
+export interface ServiceCategoryData {
+  name: string;
+  count: number;
+}
+
+// Get all dashboard stats in one call
+export const getAllDashboardStats = async (): Promise<DashboardStats> => {
+  const [
+    userCount,
+    appointmentCount,
+    vehicleCount,
+    totalEarnings,
+    activeServiceCount,
+    confirmedAppointments,
+    todayAppointments
+  ] = await Promise.all([
+    getDashboardUserCount(),
+    getDashboardAppointmentCount(),
+    getDashboardVehicleCount(),
+    getDashboardTotalEarnings(),
+    getDashboardActiveServiceCount(),
+    getDashboardConfirmedAppointments(),
+    getDashboardTodayAppointments()
+  ]);
+
+  return {
+    userCount,
+    appointmentCount,
+    vehicleCount,
+    totalEarnings,
+    activeServiceCount,
+    confirmedAppointments,
+    todayAppointments
+  };
+};
