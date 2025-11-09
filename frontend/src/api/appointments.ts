@@ -76,6 +76,10 @@ export interface AdminAppointmentDTO {
   actualEndTime?: string | null;
   createdAt?: string;
   updatedAt?: string;
+
+  // Time logs information
+  timeLogsCount?: number;
+  totalTimeLoggedMinutes?: number;
 }
 
 export const bookAppointment = async (payload: AppointmentRequest) => {

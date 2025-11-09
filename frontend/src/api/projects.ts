@@ -126,6 +126,10 @@ export interface AdminProjectDTO {
 
   createdAt?: string;
   updatedAt?: string;
+
+  // Time logs information
+  timeLogsCount?: number;
+  totalTimeLoggedHours?: number;
 }
 
 /** Approve + Assign payload (see AdminServices.approveAndAssignProject usage) */

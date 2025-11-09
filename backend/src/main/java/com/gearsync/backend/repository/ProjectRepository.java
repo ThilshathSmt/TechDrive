@@ -54,4 +54,12 @@ public interface ProjectRepository extends JpaRepository<Project, Long> {
 
     // Find projects by customer and vehicle
     List<Project> findByCustomerIdAndVehicleId(Long customerId, Long vehicleId);
+
+    // Find all projects with timeLogs eagerly loaded
+    @Query("SELECT DISTINCT p FROM Project p LEFT JOIN FETCH p.timeLogs")
+    List<Project> findAllWithTimeLogs();
+
+    // Find projects by status with timeLogs eagerly loaded
+    @Query("SELECT DISTINCT p FROM Project p LEFT JOIN FETCH p.timeLogs WHERE p.status = :status")
+    List<Project> findByStatusWithTimeLogs(@Param("status") ProjectStatus status);
 }

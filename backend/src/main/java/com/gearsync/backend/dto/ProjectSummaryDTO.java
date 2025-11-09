@@ -20,4 +20,8 @@ public class ProjectSummaryDTO {
     private java.math.BigDecimal estimatedCost;
     private Integer progressPercentage;
     private LocalDateTime createdAt;
+    
+    // Time log information
+    private Integer timeLogsCount;
+    private Double totalTimeLoggedHours;
 }

@@ -523,7 +523,7 @@ public class AdminServices {
     public List<ProjectSummaryDTO> getAllProjects(String adminEmail) {
 
         validateAdmin(adminEmail);
-        List<Project> projects = projectRepository.findAll();
+        List<Project> projects = projectRepository.findAllWithTimeLogs();
 
         return projects.stream()
                 .map(this::convertToProjectSummary)
@@ -540,7 +540,7 @@ public class AdminServices {
 
         try {
             ProjectStatus projectStatus = ProjectStatus.valueOf(status.toUpperCase());
-            List<Project> projects = projectRepository.findByStatus(projectStatus);
+            List<Project> projects = projectRepository.findByStatusWithTimeLogs(projectStatus);
 
             return projects.stream()
                     .map(this::convertToProjectSummary)
@@ -716,6 +716,24 @@ public class AdminServices {
 
         dto.setProgressPercentage(appointment.getProgressPercentage());
         dto.setCreatedAt(appointment.getCreatedAt());
+        
+        // Calculate time log statistics
+        if (appointment.getTimeLogs() != null && !appointment.getTimeLogs().isEmpty()) {
+            dto.setTimeLogsCount(appointment.getTimeLogs().size());
+            int totalMinutes = appointment.getTimeLogs().stream()
+                    .mapToInt(timeLog -> {
+                        long minutes = java.time.Duration.between(
+                                timeLog.getStartTime(),
+                                timeLog.getEndTime()
+                        ).toMinutes();
+                        return (int) minutes;
+                    })
+                    .sum();
+            dto.setTotalTimeLoggedMinutes(totalMinutes);
+        } else {
+            dto.setTimeLogsCount(0);
+            dto.setTotalTimeLoggedMinutes(0);
+        }
 
         return dto;
     }
@@ -741,6 +759,24 @@ public class AdminServices {
         dto.setEstimatedCost(project.getEstimatedCost());
         dto.setProgressPercentage(project.getProgressPercentage());
         dto.setCreatedAt(project.getCreatedAt());
+        
+        // Calculate time log statistics
+        if (project.getTimeLogs() != null && !project.getTimeLogs().isEmpty()) {
+            dto.setTimeLogsCount(project.getTimeLogs().size());
+            double totalHours = project.getTimeLogs().stream()
+                    .mapToDouble(timeLog -> {
+                        long minutes = java.time.Duration.between(
+                                timeLog.getStartTime(),
+                                timeLog.getEndTime()
+                        ).toMinutes();
+                        return minutes / 60.0;
+                    })
+                    .sum();
+            dto.setTotalTimeLoggedHours(totalHours);
+        } else {
+            dto.setTimeLogsCount(0);
+            dto.setTotalTimeLoggedHours(0.0);
+        }
 
         return dto;
     }

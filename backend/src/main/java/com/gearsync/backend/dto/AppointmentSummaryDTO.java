@@ -21,4 +21,8 @@ public class AppointmentSummaryDTO {
     private String assignedEmployeeName;
     private Integer progressPercentage;
     private LocalDateTime createdAt;
+    
+    // Time log information
+    private Integer timeLogsCount;
+    private Integer totalTimeLoggedMinutes;
 }

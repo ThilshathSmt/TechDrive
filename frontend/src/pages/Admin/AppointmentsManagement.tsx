@@ -380,6 +380,20 @@ const AppointmentsManagement: React.FC = () => {
                               {a.assignedEmployeeEmail ? `(${a.assignedEmployeeEmail})` : ""}
                             </div>
                           )}
+
+                          {a.timeLogsCount !== undefined && a.timeLogsCount > 0 && (
+                            <div className="flex items-center gap-2 mt-2 text-xs">
+                              <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-cyan-500/10 text-cyan-200 ring-1 ring-cyan-400/20">
+                                <Clock className="w-3 h-3" />
+                                {a.timeLogsCount} time log{a.timeLogsCount > 1 ? 's' : ''}
+                              </span>
+                              {a.totalTimeLoggedMinutes !== undefined && a.totalTimeLoggedMinutes > 0 && (
+                                <span className="text-slate-400">
+                                  • {(a.totalTimeLoggedMinutes / 60).toFixed(1)}h logged
+                                </span>
+                              )}
+                            </div>
+                          )}
                         </div>
 
                         <div className="flex flex-col gap-2 shrink-0 text-sm">
