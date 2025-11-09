@@ -742,23 +742,46 @@ public class AdminServices {
         ProjectSummaryDTO dto = new ProjectSummaryDTO();
         dto.setId(project.getId());
         dto.setProjectName(project.getProjectName());
+        dto.setDescription(project.getDescription());
         dto.setStatus(project.getStatus().name());
+        
+        // Customer info
+        dto.setCustomerId(project.getCustomer().getId());
         dto.setCustomerName(project.getCustomer().getFirstName() + " " + project.getCustomer().getLastName());
         dto.setCustomerEmail(project.getCustomer().getEmail());
+        dto.setCustomerPhone(project.getCustomer().getPhoneNumber());
+        
+        // Vehicle info
+        dto.setVehicleId(project.getVehicle().getId());
         dto.setVehicleRegistrationNumber(project.getVehicle().getRegistrationNumber());
+        dto.setVehicleMake(project.getVehicle().getMake());
+        dto.setVehicleModel(project.getVehicle().getModel());
+        dto.setVehicleYear(project.getVehicle().getYear() != null ? String.valueOf(project.getVehicle().getYear()) : null);
 
+        // Employee assignment
         if (project.getAssignedEmployee() != null) {
+            dto.setAssignedEmployeeId(project.getAssignedEmployee().getId());
             dto.setAssignedEmployeeName(
                     project.getAssignedEmployee().getFirstName() + " " +
                             project.getAssignedEmployee().getLastName()
             );
+            dto.setAssignedEmployeeEmail(project.getAssignedEmployee().getEmail());
         } else {
             dto.setAssignedEmployeeName("Unassigned");
         }
 
+        // Cost and duration
         dto.setEstimatedCost(project.getEstimatedCost());
+        dto.setActualCost(project.getActualCost());
+        dto.setEstimatedDurationHours(project.getEstimatedDurationHours());
         dto.setProgressPercentage(project.getProgressPercentage());
+        
+        // Dates
+        dto.setStartDate(project.getStartDate());
+        dto.setCompletionDate(project.getCompletionDate());
+        dto.setExpectedCompletionDate(project.getExpectedCompletionDate());
         dto.setCreatedAt(project.getCreatedAt());
+        dto.setUpdatedAt(project.getUpdatedAt());
         
         // Calculate time log statistics
         if (project.getTimeLogs() != null && !project.getTimeLogs().isEmpty()) {
