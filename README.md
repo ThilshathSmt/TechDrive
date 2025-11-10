@@ -59,6 +59,8 @@ The Automobile Service Management System is a comprehensive enterprise applicati
 
 ## 🏗️ Architecture Design
 
+![System Architecture](./assets/auto-service-architecture.jpg)
+
 ### High-Level Architecture
 ```
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
