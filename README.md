@@ -1,6 +1,26 @@
 # Automobile Service Management System
 ## Complete Architecture & Implementation Guide
 
+# Clone the repository
+git clone https://github.com/ThilshathSmt/TechDrive.git
+cd TechDrive
+
+# Build and start all services with Docker Compose
+docker-compose up -d --build
+
+# Verify running containers
+docker ps
+
+# Check backend API health (Spring Boot)
+curl http://localhost:8080/actuator/health
+
+# Check frontend
+http://localhost:3000
+
+# Stop all running containers
+docker-compose down
+
+
 ### 📋 Table of Contents
 1. [System Overview](#system-overview)
 2. [Architecture Design](#architecture-design)
@@ -38,6 +58,8 @@ The Automobile Service Management System is a comprehensive enterprise applicati
 ---
 
 ## 🏗️ Architecture Design
+![System Architecture](./assets/auto-service-architecture.jpg)
+
 ![System Architecture](./assets/auto-service-architecture.jpg)
 
 ### High-Level Architecture
