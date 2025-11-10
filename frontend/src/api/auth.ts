@@ -1,10 +1,23 @@
+declare global {
+  interface ImportMeta {
+    env: {
+      REACT_APP_BACKEND_URL?: string;
+      REACT_APP_CHATBOT_URL?: string;
+    };
+  }
+}
 import axios from "axios";
 
-const API_URL = "http://localhost:8080/api";
+// Vite-compatible access to env
+const API_URL =
+  import.meta.env.REACT_APP_BACKEND_URL || "http://3.7.205.141:8080";
+
+console.log("Frontend connected to API base:", API_URL);
 
 const api = axios.create({
-  baseURL: API_URL,
+  baseURL: `${API_URL}/api`,
 });
+
 
 // Attach token automatically for authenticated requests
 // Exclude public auth endpoints that don't need authentication

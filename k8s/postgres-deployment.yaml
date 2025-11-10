@@ -1,0 +1,45 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gearsync-postgres
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: gearsync-postgres
+  template:
+    metadata:
+      labels:
+        app: gearsync-postgres
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:16
+          env:
+            - name: POSTGRES_USER
+              value: gearsync_user
+            - name: POSTGRES_PASSWORD
+              value: gearsync@1212
+            - name: POSTGRES_DB
+              value: gearsync_db
+          ports:
+            - containerPort: 5432
+          volumeMounts:
+            - name: postgres-storage
+              mountPath: /var/lib/postgresql/data
+      volumes:
+        - name: postgres-storage
+          emptyDir: {}
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: gearsync-postgres
+spec:
+  selector:
+    app: gearsync-postgres
+  ports:
+    - port: 5432
+      targetPort: 5432
+  clusterIP: None

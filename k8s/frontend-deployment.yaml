@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gearsync-frontend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: gearsync-frontend
+  template:
+    metadata:
+      labels:
+        app: gearsync-frontend
+    spec:
+      containers:
+        - name: frontend
+          image: faskath513/gearsync-frontend:latest
+          ports:
+            - containerPort: 80
+          env:
+            - name: REACT_APP_BACKEND_URL
+              value: http://gearsync-backend:8080
+            - name: REACT_APP_CHATBOT_URL
+              value: http://chatbot-service:8000
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: gearsync-frontend
+spec:
+  selector:
+    app: gearsync-frontend
+  ports:
+    - port: 80
+      targetPort: 80
+  type: ClusterIP
